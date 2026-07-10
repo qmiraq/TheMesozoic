@@ -1,0 +1,52 @@
+from rcon.source import Client
+
+from bot.services.server_service import get_server_config
+
+
+class RCONService:
+
+    def __init__(self):
+        self.config = None
+
+
+    async def connect(self):
+
+        self.config = await get_server_config()
+
+        if not self.config["host"] or not self.config["port"]:
+            raise Exception(
+                "RCON settings are missing."
+            )
+
+
+async def send_command(
+    self,
+    command: str
+):
+
+    if not self.config:
+        await self.connect()
+
+    try:
+
+        with Client(
+            self.config["host"],
+            self.config["port"],
+            passwd=self.config["password"]
+        ) as client:
+
+            response = client.run(command)
+
+            return response
+
+
+    except Exception as e:
+
+        return f"RCON ERROR: {e}"
+
+
+    async def disconnect(self):
+        self.config = None
+
+
+rcon = RCONService()

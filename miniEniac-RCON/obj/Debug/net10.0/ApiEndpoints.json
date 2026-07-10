@@ -1,0 +1,22 @@
+[
+  {
+    "ContainingType": "miniEniac_RCON.Controllers.RconController",
+    "Method": "Auth",
+    "RelativePath": "Rcon/auth",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "miniEniac_RCON.Controllers.StatusController",
+    "Method": "Get",
+    "RelativePath": "Status",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  }
+]

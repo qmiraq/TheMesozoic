@@ -1,0 +1,6 @@
+@miniEniac_RCON_HostAddress = http://localhost:5064
+
+GET {{miniEniac_RCON_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

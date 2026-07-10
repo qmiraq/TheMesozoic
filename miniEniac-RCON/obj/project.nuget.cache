@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "pntSBC6qzwc=",
+  "success": true,
+  "projectFilePath": "D:\\EvrimaBot\\miniEniac-RCON\\miniEniac-RCON.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\neuma\\.nuget\\packages\\microsoft.openapi\\3.8.0\\microsoft.openapi.3.8.0.nupkg.sha512",
+    "C:\\Users\\neuma\\.nuget\\packages\\theisleevrimarconclient\\2.1.0\\theisleevrimarconclient.2.1.0.nupkg.sha512"
+  ],
+  "logs": []
+}
