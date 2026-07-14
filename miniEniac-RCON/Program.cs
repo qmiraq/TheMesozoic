@@ -15,6 +15,9 @@ builder.Services.AddSingleton<SkinBridgeService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.UseDefaultFiles();
+
+app.UseStaticFiles();
 
 app.UseHttpsRedirection();
 

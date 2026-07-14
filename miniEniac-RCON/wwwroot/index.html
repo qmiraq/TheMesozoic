@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111713">
+  <title>The Mesozoic Skin Creator</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="The Mesozoic Skin Creator home">
+        <span class="brand-mark" aria-hidden="true">M</span>
+        <span>
+          <strong>The Mesozoic</strong>
+          <small>EVRIMA Skin Creator</small>
+        </span>
+      </a>
+      <div id="bridgeBadge" class="status-badge status-badge--checking">
+        <span class="status-dot"></span>
+        <span>Checking bridge</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">LIVE DINOSAUR CUSTOMIZER</p>
+          <h1>Change your current EVRIMA skin from the browser.</h1>
+          <p class="hero-text">
+            Load your live dinosaur, adjust its pattern and colors, then apply the skin directly through miniEniac.
+          </p>
+        </div>
+        <div class="hero-note">
+          <span class="note-label">Current-life persistence</span>
+          <strong>Relog and server restart safe</strong>
+          <p>The skin ends on a true new dinosaur life unless a future per-species default is explicitly enabled.</p>
+        </div>
+      </section>
+
+      <section class="dev-gate card" aria-labelledby="devGateTitle">
+        <div>
+          <span class="section-kicker">DEVELOPMENT MODE</span>
+          <h2 id="devGateTitle">Load a linked player</h2>
+          <p>This temporary SteamID field is only for testing. Discord login will replace it before the site is public.</p>
+        </div>
+        <form id="loadForm" class="load-form">
+          <label for="steamIdInput">SteamID64</label>
+          <div class="input-row">
+            <input
+              id="steamIdInput"
+              name="steamId"
+              type="text"
+              inputmode="numeric"
+              pattern="[0-9]{15,20}"
+              maxlength="20"
+              autocomplete="off"
+              value="76561198302818002"
+              required>
+            <button id="loadButton" class="button button--primary" type="submit">Load skin</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="workspace" class="workspace is-hidden" aria-live="polite">
+        <div class="dino-overview card">
+          <div>
+            <span class="section-kicker">CURRENT DINOSAUR</span>
+            <h2 id="speciesName">Unknown</h2>
+            <div class="metadata-grid">
+              <div>
+                <span>Life serial</span>
+                <strong id="lifeSerial">—</strong>
+              </div>
+              <div>
+                <span>Gender</span>
+                <strong id="genderValue">—</strong>
+              </div>
+              <div>
+                <span>Theme</span>
+                <strong id="themeIndexValue">—</strong>
+              </div>
+            </div>
+          </div>
+          <button id="refreshButton" class="button button--ghost" type="button">Refresh from game</button>
+        </div>
+
+        <div class="editor-layout">
+          <aside class="preview-card card">
+            <div class="preview-heading">
+              <span class="section-kicker">COLOR PREVIEW</span>
+              <p>Temporary palette preview until we add the real 3D dinosaur model.</p>
+            </div>
+
+            <div class="palette-preview" id="palettePreview" aria-label="Current skin color palette preview">
+              <div data-preview="body"></div>
+              <div data-preview="markings"></div>
+              <div data-preview="flank"></div>
+              <div data-preview="underbelly"></div>
+              <div data-preview="maleDisplay"></div>
+              <div data-preview="teeth"></div>
+              <div data-preview="mouth"></div>
+              <div data-preview="claws"></div>
+            </div>
+
+            <p class="preview-disclaimer">EVRIMA remaps RGB values through species palette textures, so the final in-game color can shift brighter, darker, or toward another hue.</p>
+
+            <div class="pattern-controls">
+              <label for="patternIndex">Pattern</label>
+              <select id="patternIndex"></select>
+
+              <label for="skinVariation">Skin variation</label>
+              <input id="skinVariation" type="number" step="1" min="0">
+            </div>
+
+            <div class="preview-facts">
+              <span id="patternFact">Pattern —</span>
+              <span id="variationFact">Variation —</span>
+            </div>
+          </aside>
+
+          <section class="color-editor card" aria-labelledby="colorEditorTitle">
+            <div class="editor-heading">
+              <div>
+                <span class="section-kicker">SKIN COLORS</span>
+                <h2 id="colorEditorTitle">Customize visible channels</h2>
+              </div>
+              <button id="resetButton" class="button button--ghost" type="button">Reset loaded values</button>
+            </div>
+            <p class="editor-note">Detail and Eyes are hidden because those regions no longer affect live EVRIMA skins. Their current values are preserved silently for compatibility.</p>
+
+            <div id="colorGrid" class="color-grid"></div>
+
+            <div class="apply-bar">
+              <div id="requestStatus" class="request-status" role="status">
+                <strong>Ready</strong>
+                <span>Load a dinosaur, change its skin, then apply.</span>
+              </div>
+              <button id="applyButton" class="button button--apply" type="button">Apply to live dinosaur</button>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>The Mesozoic</span>
+      <span>Powered by miniEniac</span>
+    </footer>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
