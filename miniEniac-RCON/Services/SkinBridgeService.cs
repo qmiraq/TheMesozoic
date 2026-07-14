@@ -91,7 +91,8 @@ public sealed partial class SkinBridgeService
             ["mouth"] = NormalizeRgb(request.Mouth),
             ["claws"] = NormalizeRgb(request.Claws),
             ["pattern_index"] = request.PatternIndex,
-            ["skin_variation"] = request.SkinVariation
+            ["skin_variation"] = request.SkinVariation,
+            ["is_female"] = request.IsFemale
         };
 
         return await SendAndWaitAsync(commandId, command, cancellationToken);

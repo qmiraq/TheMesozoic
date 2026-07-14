@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("miniEniac-RCON")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4cea1b5fd8e4c045cbac36f3178f1559dafbb476")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c0c3982bbb5bca70fa9eac984b70f7b2152013f1")]
 [assembly: System.Reflection.AssemblyProductAttribute("miniEniac-RCON")]
 [assembly: System.Reflection.AssemblyTitleAttribute("miniEniac-RCON")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -18,9 +18,19 @@
           <small>EVRIMA Skin Creator</small>
         </span>
       </a>
-      <div id="bridgeBadge" class="status-badge status-badge--checking">
-        <span class="status-dot"></span>
-        <span>Checking bridge</span>
+
+      <div id="profileArea" class="profile-area">
+        <a id="headerLoginButton" class="button button--discord is-hidden" href="/Auth/discord/login">Log in with Discord</a>
+
+        <div id="profileCard" class="profile-card is-hidden">
+          <div id="profileAvatarFallback" class="profile-avatar profile-avatar--fallback" aria-hidden="true">M</div>
+          <img id="profileAvatar" class="profile-avatar is-hidden" src="" alt="Discord profile picture">
+          <div class="profile-copy">
+            <strong id="profileDisplayName">Discord user</strong>
+            <small id="profileUsername"></small>
+          </div>
+          <button id="logoutButton" class="profile-logout" type="button" title="Log out">Log out</button>
+        </div>
       </div>
     </header>
 
@@ -30,38 +40,41 @@
           <p class="eyebrow">LIVE DINOSAUR CUSTOMIZER</p>
           <h1>Change your current EVRIMA skin from the browser.</h1>
           <p class="hero-text">
-            Load your live dinosaur, adjust its pattern and colors, then apply the skin directly through miniEniac.
+            Sign in with Discord, customize your current dinosaur, and apply the skin directly through miniEniac.
           </p>
         </div>
         <div class="hero-note">
           <span class="note-label">Current-life persistence</span>
           <strong>Relog and server restart safe</strong>
-          <p>The skin ends on a true new dinosaur life unless a future per-species default is explicitly enabled.</p>
+          <p>The applied skin remains with your current dinosaur life and ends when that life truly ends.</p>
         </div>
       </section>
 
-      <section class="dev-gate card" aria-labelledby="devGateTitle">
-        <div>
-          <span class="section-kicker">DEVELOPMENT MODE</span>
-          <h2 id="devGateTitle">Load a linked player</h2>
-          <p>This temporary SteamID field is only for testing. Discord login will replace it before the site is public.</p>
-        </div>
-        <form id="loadForm" class="load-form">
-          <label for="steamIdInput">SteamID64</label>
-          <div class="input-row">
-            <input
-              id="steamIdInput"
-              name="steamId"
-              type="text"
-              inputmode="numeric"
-              pattern="[0-9]{15,20}"
-              maxlength="20"
-              autocomplete="off"
-              value="76561198302818002"
-              required>
-            <button id="loadButton" class="button button--primary" type="submit">Load skin</button>
-          </div>
-        </form>
+      <section id="loadingGate" class="gate-card card">
+        <span class="section-kicker">CONNECTING</span>
+        <h2>Checking your session…</h2>
+        <p>Loading your Discord account and linked player profile.</p>
+      </section>
+
+      <section id="authGate" class="gate-card card is-hidden">
+        <span class="section-kicker">DISCORD LOGIN</span>
+        <h2>Sign in to customize your dinosaur</h2>
+        <p>Your Discord identity is used to find your already-linked SteamID securely. The browser never chooses which player's dinosaur to edit.</p>
+        <a class="button button--discord button--large" href="/Auth/discord/login">Continue with Discord</a>
+      </section>
+
+      <section id="linkGate" class="gate-card card is-hidden">
+        <span class="section-kicker">STEAM LINK REQUIRED</span>
+        <h2>Your Discord account is not linked yet</h2>
+        <p>Use the SteamID linking panel in The Mesozoic Discord, then refresh this page.</p>
+        <button id="retryLinkButton" class="button button--primary" type="button">Check again</button>
+      </section>
+
+      <section id="offlineGate" class="gate-card card is-hidden">
+        <span class="section-kicker">NO ACTIVE DINOSAUR</span>
+        <h2>Join the server and spawn first</h2>
+        <p>miniEniac could not find an active dinosaur for your linked Steam account.</p>
+        <button id="retrySkinButton" class="button button--primary" type="button">Try again</button>
       </section>
 
       <section id="workspace" class="workspace is-hidden" aria-live="polite">
@@ -69,20 +82,6 @@
           <div>
             <span class="section-kicker">CURRENT DINOSAUR</span>
             <h2 id="speciesName">Unknown</h2>
-            <div class="metadata-grid">
-              <div>
-                <span>Life serial</span>
-                <strong id="lifeSerial">—</strong>
-              </div>
-              <div>
-                <span>Gender</span>
-                <strong id="genderValue">—</strong>
-              </div>
-              <div>
-                <span>Theme</span>
-                <strong id="themeIndexValue">—</strong>
-              </div>
-            </div>
           </div>
           <button id="refreshButton" class="button button--ghost" type="button">Refresh from game</button>
         </div>
@@ -91,7 +90,7 @@
           <aside class="preview-card card">
             <div class="preview-heading">
               <span class="section-kicker">COLOR PREVIEW</span>
-              <p>Temporary palette preview until we add the real 3D dinosaur model.</p>
+              <p>Palette preview for the colors currently selected below.</p>
             </div>
 
             <div class="palette-preview" id="palettePreview" aria-label="Current skin color palette preview">
@@ -105,19 +104,27 @@
               <div data-preview="claws"></div>
             </div>
 
-            <p class="preview-disclaimer">EVRIMA remaps RGB values through species palette textures, so the final in-game color can shift brighter, darker, or toward another hue.</p>
+            <div class="appearance-controls">
+              <div class="control-group">
+                <label for="patternIndex">Pattern</label>
+                <select id="patternIndex"></select>
+              </div>
 
-            <div class="pattern-controls">
-              <label for="patternIndex">Pattern</label>
-              <select id="patternIndex"></select>
+              <div class="control-group">
+                <div class="control-label-row">
+                  <label for="skinVariation">Skin variation</label>
+                  <output id="skinVariationValue" for="skinVariation">0</output>
+                </div>
+                <input id="skinVariation" class="range-control" type="range" min="0" max="10" step="1" value="0">
+              </div>
 
-              <label for="skinVariation">Skin variation</label>
-              <input id="skinVariation" type="number" step="1" min="0">
-            </div>
-
-            <div class="preview-facts">
-              <span id="patternFact">Pattern —</span>
-              <span id="variationFact">Variation —</span>
+              <fieldset class="control-group sex-control">
+                <legend>Asset sex</legend>
+                <div class="sex-buttons" role="group" aria-label="Asset sex">
+                  <button id="maleButton" class="sex-button" type="button" data-female="false">Male</button>
+                  <button id="femaleButton" class="sex-button" type="button" data-female="true">Female</button>
+                </div>
+              </fieldset>
             </div>
           </aside>
 
@@ -129,14 +136,14 @@
               </div>
               <button id="resetButton" class="button button--ghost" type="button">Reset loaded values</button>
             </div>
-            <p class="editor-note">Detail and Eyes are hidden because those regions no longer affect live EVRIMA skins. Their current values are preserved silently for compatibility.</p>
+            <p class="editor-note">Detail and Eyes stay supported internally but are hidden because those regions no longer affect live EVRIMA skins.</p>
 
             <div id="colorGrid" class="color-grid"></div>
 
             <div class="apply-bar">
               <div id="requestStatus" class="request-status" role="status">
                 <strong>Ready</strong>
-                <span>Load a dinosaur, change its skin, then apply.</span>
+                <span>Change your skin, then apply it to your live dinosaur.</span>
               </div>
               <button id="applyButton" class="button button--apply" type="button">Apply to live dinosaur</button>
             </div>
