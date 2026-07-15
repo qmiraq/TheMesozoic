@@ -196,6 +196,12 @@ main { flex: 1; padding: 44px 0 24px; }
   letter-spacing: 0.12em;
 }
 
+.hero-note-point + .hero-note-point {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line-strong);
+}
+
 .hero-note strong { display: block; margin: 9px 0 8px; font-size: 1.08rem; }
 .hero-note p { margin: 0; color: var(--muted); line-height: 1.55; font-size: 0.92rem; }
 

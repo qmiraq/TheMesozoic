@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using miniEniac_RCON.Endpoints;
 using miniEniac_RCON.Services;
-using miniEniac_RCON.Endpoints;
 using miniEniac_RCON.Models;
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,12 +8,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddSingleton<EvrimaRconService>();
-builder.Services.Configure<SkinBridgeOptions>(
-    builder.Configuration.GetSection("SkinBridge"));
 
 builder.Services.AddSingleton<SkinBridgeService>();
 
-var app = builder.Build();
 builder.Services.Configure<SkinBridgeOptions>(
     builder.Configuration.GetSection("SkinBridge"));
 
@@ -27,7 +23,6 @@ builder.Services.Configure<DiscordOAuthOptions>(
 builder.Services.Configure<PlayerDatabaseOptions>(
     builder.Configuration.GetSection("PlayerDatabase"));
 
-builder.Services.AddSingleton<SkinBridgeService>();
 builder.Services.AddSingleton<PlayerLinkService>();
 builder.Services.AddSingleton<DiscordOAuthService>();
 builder.Services.AddHttpClient();
@@ -67,6 +62,7 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
+var app = builder.Build();
 // Configure the HTTP request pipeline.
 app.UseDefaultFiles();
 
