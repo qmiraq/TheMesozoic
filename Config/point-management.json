@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "basePointsPerFiveMinutes": 10,
+  "boost": {
+    "multiplier": 2,
+    "startedAtUtc": "2026-08-14T02:22:11.6414629\u002B00:00",
+    "endsAtUtc": "2026-08-16T22:00:00.0000000\u002B00:00",
+    "createdByDiscordId": "323802380007112704"
+  },
+  "supporterRoles": [
+    {
+      "roleId": "1520120480575655986",
+      "pointsPerFiveMinutes": 11
+    },
+    {
+      "roleId": "1520120754656641184",
+      "pointsPerFiveMinutes": 13
+    },
+    {
+      "roleId": "1520120848487419974",
+      "pointsPerFiveMinutes": 15
+    }
+  ]
+}

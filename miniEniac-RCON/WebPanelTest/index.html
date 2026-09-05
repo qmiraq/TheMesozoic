@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#061112">
+  <title>The Mesozoic Web Panel</title>
+  <link rel="stylesheet" href="/test/assets/styles.css?v=11">
+  <script src="/test/assets/app.js?v=11" defer></script>
+</head>
+<body>
+  <div class="panel-shell">
+    <aside id="sidebar" class="sidebar">
+      <div class="brand">
+        <img src="/test/assets/LogoMeso.png" alt="The Mesozoic logo">
+        <div>
+          <strong>The Mesozoic</strong>
+          <span id="brandPanelLabel">PLAYER PANEL</span>
+        </div>
+        <button id="sidebarToggle" class="icon-button sidebar-toggle" type="button" aria-label="Collapse sidebar">‹</button>
+      </div>
+
+      <button id="modeButton" class="mode-button is-hidden" type="button">
+        <span class="mode-icon" aria-hidden="true">♢</span>
+        <span id="modeButtonLabel">Switch to Head Staff Panel</span>
+        <span aria-hidden="true">→</span>
+      </button>
+
+      <nav class="navigation" aria-label="Web panel features">
+        <p id="navigationLabel" class="nav-heading">PLAYER FEATURES</p>
+        <button class="nav-item" type="button" data-feature="skin">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18h1.4a2.1 2.1 0 0 0 1.2-3.8l-.5-.4a1.25 1.25 0 0 1 .7-2.3H17a4 4 0 0 0 4-4C21 6.4 17 3 12 3Z"></path><circle cx="7.5" cy="11" r="1"></circle><circle cx="9.5" cy="7.5" r="1"></circle><circle cx="14" cy="7" r="1"></circle><circle cx="17" cy="10" r="1"></circle></svg>
+          </span>
+          <span>Skin Creator</span>
+        </button>
+        <button class="nav-item admin-feature" type="button" data-feature="ai">
+          <span class="nav-icon nav-icon--dino" aria-hidden="true">🦖</span>
+          <span>Custom AI</span>
+        </button>
+        <button class="nav-item admin-feature" type="button" data-feature="points">
+          <span class="nav-icon nav-icon--euro" aria-hidden="true">€</span>
+          <span>Economy Management</span>
+        </button>
+        <button class="nav-item admin-feature" type="button" data-feature="shop"><span class="nav-icon" aria-hidden="true">🎟️</span><span>Shop Management</span></button>
+        <button class="nav-item admin-feature" type="button" data-feature="compensation"><span class="nav-icon" aria-hidden="true">🛟</span><span>Player Compensation</span></button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div id="userAvatarFallback" class="user-avatar">M</div>
+        <img id="userAvatar" class="user-avatar user-avatar--image is-hidden" src="" alt="Discord profile picture">
+        <div class="user-copy">
+          <strong id="userName">Loading…</strong>
+          <span id="userRole">PLAYER ACCESS</span>
+        </div>
+        <button id="logoutButton" class="logout-button" type="button" aria-label="Log out" title="Log out">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4"></path>
+            <path d="M14 8l4 4-4 4M18 12H9"></path>
+          </svg>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <button id="mobileMenuButton" class="icon-button mobile-menu" type="button" aria-label="Open navigation">☰</button>
+        <button id="sidebarOpenButton" class="icon-button sidebar-open" type="button" aria-label="Open sidebar">›</button>
+        <div>
+          <p id="modeEyebrow">PLAYER PANEL</p>
+          <h1 id="pageTitle">Skin Creator</h1>
+        </div>
+        <span class="test-badge">PRIVATE TEST</span>
+      </header>
+
+      <section class="feature-stage" aria-live="polite">
+        <div id="loadingState" class="state-card">
+          <span class="loader" aria-hidden="true"></span>
+          <strong>Loading web panel…</strong>
+        </div>
+        <div id="errorState" class="state-card state-card--error is-hidden">
+          <strong>Unable to load this feature</strong>
+          <p id="errorMessage"></p>
+          <button id="retryButton" type="button">Try again</button>
+        </div>
+        <iframe id="featureFrame" class="feature-frame is-hidden" title="The Mesozoic feature panel"></iframe>
+        <section id="pointManagementPanel" class="native-panel is-hidden">
+          <div id="pointStatus" class="native-status is-hidden" role="status"></div>
+
+          <article class="management-card">
+            <div class="management-card__heading">
+              <div>
+                <h3>Global Point Boost</h3>
+                <p>Choose a point multiplier and for how long/until when it should last.</p>
+              </div>
+              <div class="heading-actions"><button id="refreshPointsButton" class="small-button" type="button">Refresh</button><span id="boostBadge" class="status-badge">INACTIVE</span></div>
+            </div>
+            <div id="boostSummary" class="boost-summary">No point boost is currently active.</div>
+            <div class="form-grid form-grid--boost">
+              <label>Multiplier
+                <div class="input-suffix"><input id="boostMultiplier" type="number" min="1.01" max="10" step="0.25" value="2"><span>×</span></div>
+              </label>
+              <label>End method
+                <select id="boostMode">
+                  <option value="duration">After a duration</option>
+                  <option value="until">At a date and time</option>
+                </select>
+              </label>
+              <label id="durationField">Duration
+                <div class="input-suffix"><input id="boostDuration" type="number" min="5" max="10080" step="5" value="60"><span>minutes</span></div>
+              </label>
+              <label id="untilField" class="is-hidden">End in Paris time
+                <input id="boostUntil" type="datetime-local">
+              </label>
+            </div>
+            <div class="form-actions">
+              <button id="activateBoostButton" class="action-button action-button--primary" type="button">Activate Boost</button>
+              <button id="stopBoostButton" class="action-button action-button--danger" type="button">Stop Boost</button>
+            </div>
+          </article>
+
+          <article class="management-card">
+            <div class="management-card__heading">
+              <div>
+                <h3>Manage Supporter Roles</h3>
+                <p>Input a Discord ID and how many points they should get.</p>
+              </div>
+              <button id="addSupporterRoleButton" class="small-button" type="button">+ Add Role</button>
+            </div>
+            <p class="management-note">Global Point Boost multiplies the boosted supporter gain.</p>
+            <div id="supporterRoleRows" class="role-rows"></div>
+            <div id="emptyRoles" class="empty-roles">No supporter roles configured yet.</div>
+            <div class="form-actions">
+              <button id="saveSupporterRolesButton" class="action-button action-button--primary" type="button">Save Supporter Roles</button>
+            </div>
+          </article>
+        </section>
+        <section id="shopManagementPanel" class="native-panel is-hidden">
+          <div id="shopStatus" class="native-status is-hidden"></div>
+          <article class="management-card"><div class="management-card__heading"><div><h3>Create Shop Token Listing</h3></div><button id="refreshShopButton" class="small-button">Refresh</button></div>
+            <div class="shop-create-editor"><div class="form-grid form-grid--boost"><label>Species<select id="shopSpecies"></select></label><label>Price<input id="shopPrice" type="number" min="10" value="100"></label></div><div class="form-actions"><button id="createShopButton" class="action-button action-button--primary">Create Listing</button></div></div></article>
+          <article class="management-card"><h3>Existing Listings</h3><div id="shopListings" class="role-rows"></div></article>
+        </section>
+        <section id="compensationPanel" class="native-panel is-hidden">
+          <div id="compStatus" class="native-status is-hidden"></div>
+          <article class="management-card"><h3>Give Points</h3><p>Enter exactly one Discord ID or SteamID.</p><div class="form-grid form-grid--boost"><label>Discord ID<input id="compDiscord"></label><label>SteamID<input id="compSteam"></label><label>Points<input id="compPoints" type="number" value="100"></label></div><div class="form-actions"><button id="givePointsButton" class="action-button action-button--primary">Give Points</button></div></article>
+          <article class="management-card"><h3>Give Replacement Dino</h3><p>Return dinos lost to bugs/rulebreaks</p><div class="form-grid form-grid--boost"><label>Species<select id="compSpecies"></select></label><label>Growth %<input id="compGrowth" type="number" min="0" max="100" value="100"></label><label>Status<select id="compPrime"><option value="true">Prime</option><option value="false">Frail</option></select></label><label>Gender<select id="compFemale"><option value="false">Male</option><option value="true">Female</option></select></label><label>Entombments<input id="compEntombs" type="number" min="0" max="3" value="0"></label><label>Hunger %<input id="compHunger" type="number" value="100"></label><label>Thirst %<input id="compThirst" type="number" value="100"></label><label>Carb %<input id="compCarb" type="number" value="100"></label><label>Protein %<input id="compProtein" type="number" value="100"></label><label>Lipid %<input id="compLipid" type="number" value="100"></label></div><div id="compMutationFields" class="form-grid form-grid--boost"></div><div class="form-actions"><button id="giveDinoButton" class="action-button action-button--primary">Give Dino</button></div></article>
+        </section>
+      </section>
+    </main>
+  </div>
+  <div id="mobileScrim" class="mobile-scrim"></div>
+</body>
+</html>

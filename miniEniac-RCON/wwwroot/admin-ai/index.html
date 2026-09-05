@@ -1,0 +1,1282 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Mesozoic - AI Spawn Manager</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: #070d0d;
+      --panel: rgba(14, 22, 20, .94);
+      --panel-soft: rgba(20, 31, 28, .86);
+      --line: rgba(236, 184, 32, .28);
+      --gold: #f0bf24;
+      --cyan: #2fd8df;
+      --mint: #69d8ae;
+      --text: #f6f2e7;
+      --muted: #a8b6b0;
+      --danger: #ef5a5a;
+      --shadow: 0 22px 70px rgba(0, 0, 0, .38);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 0 0, rgba(11, 118, 119, .35), transparent 35rem),
+        radial-gradient(circle at 100% 10%, rgba(140, 65, 13, .3), transparent 42rem),
+        var(--page);
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .shell { width: min(1760px, calc(100% - 40px)); margin: 0 auto; padding: 28px 0 44px; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 0 2px 22px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 13px; }
+    .brand-mark {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      place-items: center;
+      border: 1px solid rgba(240, 191, 36, .48);
+      border-radius: 14px;
+      color: #07100f;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--gold), var(--cyan));
+      box-shadow: 0 0 28px rgba(47, 216, 223, .18);
+    }
+    .brand strong { display: block; font-size: 16px; }
+    .brand small { display: block; margin-top: 2px; color: var(--muted); }
+    .admin-pill {
+      padding: 9px 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(6, 10, 10, .58);
+    }
+
+    .hero {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 28px;
+      padding: 34px 2px 28px;
+    }
+    .eyebrow { color: var(--cyan); font-size: 12px; font-weight: 900; letter-spacing: .2em; }
+    h1 { margin: 8px 0 8px; font-size: clamp(30px, 4vw, 54px); letter-spacing: -.045em; }
+    .hero p { max-width: 760px; margin: 0; color: var(--muted); line-height: 1.6; }
+    .probe-badge {
+      flex: 0 0 auto;
+      padding: 12px 15px;
+      border: 1px solid rgba(240, 191, 36, .42);
+      border-radius: 12px;
+      color: #f9df88;
+      background: rgba(77, 56, 5, .36);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+    .stat {
+      min-height: 86px;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel-soft);
+      box-shadow: var(--shadow);
+    }
+    .stat span { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .stat strong { display: block; margin-top: 7px; font-size: 24px; }
+
+    .workspace { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(360px, .75fr); gap: 18px; align-items: start; }
+    .card {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    .card-head h2 { margin: 0; font-size: 16px; }
+    .card-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+
+    .map-frame {
+      position: relative;
+      overflow: hidden;
+      aspect-ratio: 1;
+      background: #151919;
+      cursor: crosshair;
+      touch-action: none;
+      user-select: none;
+    }
+    .map-frame.zoomed { cursor: grab; }
+    .map-frame.dragging { cursor: grabbing; }
+    .map-canvas {
+      position: absolute;
+      inset: 0;
+      transform-origin: 0 0;
+      will-change: transform;
+    }
+    .map-canvas img { display: block; width: 100%; height: auto; opacity: .82; }
+    #zoneLayer { position: absolute; z-index: 2; inset: 0; pointer-events: none; }
+    .zone-marker {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border: 3px solid #fff;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 0 6px rgba(47, 216, 223, .18), 0 0 24px rgba(47, 216, 223, .9);
+      transform: translate(-50%, -50%);
+    }
+    .zone-marker.selected { background: var(--gold); box-shadow: 0 0 0 7px rgba(240, 191, 36, .22), 0 0 28px rgba(240, 191, 36, .95); }
+    .calibration-marker {
+      position: absolute;
+      display: grid;
+      width: 24px;
+      height: 24px;
+      place-items: center;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      color: #06100e;
+      background: var(--mint);
+      box-shadow: 0 0 0 5px rgba(105, 216, 174, .22), 0 0 20px rgba(105, 216, 174, .8);
+      transform: translate(-50%, -50%);
+      font-size: 10px;
+      font-weight: 950;
+    }
+    .zone-radius {
+      position: absolute;
+      border: 2px solid rgba(47, 216, 223, .68);
+      border-radius: 50%;
+      background: rgba(47, 216, 223, .1);
+      transform: translate(-50%, -50%);
+    }
+    .zone-radius.selected { border-color: rgba(240, 191, 36, .86); background: rgba(240, 191, 36, .11); }
+    .map-hint {
+      position: absolute;
+      z-index: 4;
+      left: 16px;
+      bottom: 16px;
+      max-width: 390px;
+      padding: 9px 12px;
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 10px;
+      color: #d9e5e0;
+      background: rgba(5, 9, 9, .78);
+      backdrop-filter: blur(8px);
+      font-size: 12px;
+    }
+    .map-controls {
+      position: absolute;
+      z-index: 5;
+      top: 14px;
+      right: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px;
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 12px;
+      background: rgba(5, 9, 9, .84);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, .32);
+      backdrop-filter: blur(8px);
+    }
+    .map-controls button {
+      display: grid;
+      min-width: 34px;
+      min-height: 34px;
+      padding: 0 9px;
+      place-items: center;
+      border: 1px solid rgba(240, 191, 36, .28);
+      border-radius: 8px;
+      color: var(--text);
+      background: rgba(255, 255, 255, .06);
+      font-weight: 900;
+    }
+    .map-controls button:hover { border-color: var(--cyan); background: rgba(47, 216, 223, .12); }
+    .map-controls button:disabled { opacity: .4; cursor: not-allowed; }
+    .map-controls output {
+      min-width: 48px;
+      color: var(--mint);
+      text-align: center;
+      font: 11px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    .side { display: grid; gap: 18px; }
+    .form { display: grid; gap: 13px; padding: 18px; }
+    .field { display: grid; gap: 6px; }
+    .field label { color: #d6e0dc; font-size: 12px; font-weight: 800; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    input, select {
+      width: 100%;
+      min-height: 42px;
+      padding: 9px 11px;
+      border: 1px solid rgba(240, 191, 36, .27);
+      border-radius: 10px;
+      outline: none;
+      color: var(--text);
+      background: rgba(4, 8, 8, .72);
+    }
+    input:focus, select:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(47, 216, 223, .1); }
+    input:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
+    .coord { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 9px; }
+    .btn {
+      min-height: 39px;
+      padding: 9px 13px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--text);
+      background: rgba(255, 255, 255, .045);
+      font-weight: 800;
+    }
+    .btn:hover { border-color: rgba(240, 191, 36, .62); transform: translateY(-1px); }
+    .btn.primary { color: #07100e; border-color: transparent; background: linear-gradient(135deg, var(--cyan), var(--mint)); }
+    .btn.warn { color: #1b1200; border-color: transparent; background: linear-gradient(135deg, #f7cb3f, #e98a23); }
+    .btn.danger { color: #ffe9e9; border-color: rgba(239, 90, 90, .45); background: rgba(117, 24, 24, .42); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+    .zone-list { display: grid; gap: 9px; max-height: 320px; overflow: auto; padding: 14px; }
+    .zone-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .025);
+    }
+    .zone-row.selected { border-color: rgba(47, 216, 223, .55); background: rgba(47, 216, 223, .07); }
+    .zone-row button { all: unset; cursor: pointer; }
+    .zone-row strong { display: block; font-size: 13px; }
+    .zone-row small { display: block; margin-top: 4px; color: var(--muted); }
+    .zone-count { color: var(--gold); font-weight: 900; }
+    .calibration-list { display: grid; gap: 8px; max-height: 230px; margin-top: 12px; overflow: auto; }
+    .calibration-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .025);
+    }
+    .calibration-row strong { display: block; font-size: 12px; }
+    .calibration-row small { display: block; margin-top: 3px; color: var(--muted); font: 10px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .calibration-row button { min-height: 30px; padding: 4px 9px; }
+
+    .probe { padding: 16px 18px 18px; }
+    .probe-note { margin: 0 0 13px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .events {
+      height: 225px;
+      overflow: auto;
+      margin-top: 13px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 11px;
+      color: #b9c9c3;
+      background: #050808;
+      font: 11px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
+      white-space: pre-wrap;
+    }
+    .status-line { min-height: 22px; margin-top: 10px; color: var(--muted); font-size: 12px; }
+    .status-line.good { color: var(--mint); }
+    .status-line.bad { color: #ff8b8b; }
+
+    @media (max-width: 1050px) {
+      .workspace { grid-template-columns: 1fr; }
+      .side { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 720px) {
+      .shell { width: min(100% - 20px, 1760px); padding-top: 16px; }
+      .topbar, .hero { align-items: flex-start; flex-direction: column; }
+      .stats, .side, .two { grid-template-columns: 1fr; }
+      .admin-pill { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">M</div>
+        <div><strong>The Mesozoic</strong><small>Server Administration</small></div>
+      </div>
+      <div class="admin-pill" id="adminName">Checking administrator access...</div>
+    </header>
+
+    <section class="hero">
+      <div>
+        <div class="eyebrow">ADMIN / WORLD SYSTEMS</div>
+        <h1>AI Spawn Manager</h1>
+        <p>Design controlled wildlife and dinosaur spawn zones directly on Gateway. Saved zones are available to the game-side controller after every safety probe is confirmed.</p>
+      </div>
+      <div class="probe-badge" id="runtimeBadge">AUTOMATION STOPPED</div>
+    </section>
+
+    <section class="stats">
+      <article class="stat"><span>Total Zones</span><strong id="zoneStat">0</strong></article>
+      <article class="stat"><span>Total AI</span><strong id="targetStat">0</strong></article>
+      <article class="stat"><span>Calibration Points</span><strong id="calibrationStat">0</strong></article>
+    </section>
+
+    <section class="card" style="margin-bottom:16px">
+      <div class="card-head">
+        <div><h2>Automatic AI Runtime</h2><p>Starts enabled Maiasaura zones. Other species remain locked until their live tests pass.</p></div>
+        <div class="actions">
+          <button class="btn primary" id="startRuntime">Start AI</button>
+          <button class="btn danger" id="stopRuntime">Emergency Stop</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <article class="card">
+        <div class="card-head">
+          <div><h2>V8 Gateway Spawn Map</h2><p>Click the calibrated map to place and edit AI zones.</p></div>
+          <button class="btn primary" id="saveConfig">Save zones</button>
+        </div>
+        <div class="map-frame" id="mapFrame">
+          <div class="map-canvas" id="mapCanvas">
+            <img src="/Admin/AI/map" alt="Gateway map" id="gatewayMap" draggable="false">
+          </div>
+          <div id="zoneLayer"></div>
+          <div class="map-controls" id="mapControls" aria-label="Map zoom controls">
+            <button type="button" id="zoomOut" aria-label="Zoom out">−</button>
+            <output id="zoomLevel" aria-live="polite">100%</output>
+            <button type="button" id="zoomIn" aria-label="Zoom in">+</button>
+            <button type="button" id="zoomReset" aria-label="Reset map zoom">Reset</button>
+          </div>
+          <div class="map-hint">Click to place a zone. The inner, middle, and outer circles show spawn, roaming, and player-activation radii.</div>
+        </div>
+      </article>
+
+      <aside class="side">
+        <article class="card" hidden aria-hidden="true">
+          <div class="card-head"><div><h2>Map Calibration</h2><p>Pair your live world position with its exact point on the V8 map.</p></div></div>
+          <div class="probe">
+            <p class="probe-note">Use at least three widely separated locations: northwest, northeast, and south. Five points are recommended because they allow the system to detect an inaccurate click.</p>
+            <div class="actions">
+              <button class="btn primary" id="capturePosition">Capture my position</button>
+              <button class="btn warn" id="applyCalibration" disabled>Apply calibration</button>
+              <button class="btn" id="clearCalibration">Clear samples</button>
+            </div>
+            <div class="status-line" id="calibrationStatus">Move onto a live dinosaur, then capture your first position.</div>
+            <div class="calibration-list" id="calibrationList"></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head"><div><h2>Zone Editor</h2><p id="editorMode">Click the map to create a zone.</p></div></div>
+          <form class="form" id="zoneForm">
+            <div class="field"><label for="zoneName">Zone name</label><input id="zoneName" maxlength="48" value="Maiasaura Herd"></div>
+            <div class="field"><label for="species">Species</label><select id="species"><option>Maiasaura</option></select></div>
+            <div class="two">
+              <div class="field"><label for="targetCount">Target count</label><input id="targetCount" type="number" min="1" max="32" value="3"></div>
+              <div class="field"><label for="radius">Spawn radius (m)</label><input id="radius" type="number" min="25" max="500" value="50"></div>
+            </div>
+            <div class="two">
+              <div class="field"><label for="roamRadius">Roam radius (m)</label><input id="roamRadius" type="number" min="25" max="2000" value="300"></div>
+              <div class="field"><label for="activationRadius">Activation radius (m)</label><input id="activationRadius" type="number" min="100" max="5000" value="700"></div>
+            </div>
+            <div class="two">
+              <div class="field"><label for="growth">Growth (%)</label><input id="growth" type="number" min="5" max="100" value="100"></div>
+              <div class="field"><label for="herdLifetime">Herd lifetime (minutes)</label><input id="herdLifetime" type="number" min="1" max="120" value="10"></div>
+            </div>
+            <div class="two">
+              <div class="field"><label for="respawnMin">Respawn minimum (minutes)</label><input id="respawnMin" type="number" min="1" max="60" value="5"></div>
+              <div class="field"><label for="respawnMax">Respawn maximum (minutes)</label><input id="respawnMax" type="number" min="1" max="120" value="10"></div>
+            </div>
+            <div class="field"><label for="growthDistribution">Growth distribution (%)</label><input id="growthDistribution" value="100, 75, 50" placeholder="100, 75, 50"></div>
+            <div class="field"><label for="behavior">Behavior</label><select id="behavior"><option value="NativeWander">Native walking / survival AI</option></select></div>
+            <div class="two" id="depthFields" hidden>
+              <div class="field"><label for="minimumDepth">Minimum depth (m)</label><input id="minimumDepth" type="number" min="0" max="99" value="1"></div>
+              <div class="field"><label for="maximumDepth">Maximum depth (m)</label><input id="maximumDepth" type="number" min="1" max="100" value="20"></div>
+            </div>
+            <div class="field"><label for="calling">Scheduled calling</label><select id="calling" disabled><option>Discovery probe pending</option></select></div>
+            <label class="field" style="display:flex;flex-direction:row;align-items:center;gap:10px">
+              <input id="zoneEnabled" type="checkbox" checked style="width:auto">
+              <span>Enable this zone when automatic AI is running</span>
+            </label>
+            <div class="coord" id="coordinates">No map point selected</div>
+            <div class="actions">
+              <button class="btn primary" type="submit" id="applyZone">Add zone</button>
+              <button class="btn" type="button" id="newZone">New</button>
+              <button class="btn danger" type="button" id="deleteZone" disabled>Delete</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="card">
+          <div class="card-head"><div><h2>Configured Zones</h2><p>Only enabled, production-approved zones run automatically.</p></div></div>
+          <div class="zone-list" id="zoneList"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head"><div><h2>Manual Test Spawn</h2><p>Trace the selected zone and explicitly spawn its configured test group. Background spawning remains off.</p></div></div>
+          <div class="probe">
+            <p class="probe-note">The selected land group is spawned with its configured growth distribution and scattered inside its spawn radius. You may run multiple group tests without restarting. Aquatic species remain configuration-only until water validation is confirmed.</p>
+            <div class="actions">
+              <button class="btn" id="inspectProbe">1. Inspect hooks</button>
+              <button class="btn" id="traceProbe" disabled>2. Trace point</button>
+              <button class="btn warn" id="spawnProbe" disabled>3. Spawn full group</button>
+            </div>
+            <div class="status-line" id="statusLine">Waiting for a map point.</div>
+            <div class="events" id="events">No probe events yet.</div>
+          </div>
+        </article>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const API = "/Admin/AI/api";
+    const MAP = { size: 1600 };
+    const DEFAULT_TRANSFORM = {
+      pixelXFromWorldX: 0,
+      pixelXFromWorldY: 1599 / 1112000,
+      pixelXOffset: 5 + 465000 * (1599 / 1112000),
+      pixelYFromWorldX: 1599 / 1116000,
+      pixelYFromWorldY: 0,
+      pixelYOffset: 5 + 607000 * (1599 / 1116000)
+    };
+
+    const state = {
+      config: null,
+      selectedId: null,
+      draftPoint: null,
+      tracePassedFor: null,
+      eventsTimer: null,
+      calibration: null,
+      calibrationSamples: [],
+      pendingCapture: null,
+      captureCommandId: null,
+      processedCaptureId: null,
+      mapView: {
+        zoom: 1,
+        panX: 0,
+        panY: 0,
+        dragging: false,
+        pointerId: null,
+        startClientX: 0,
+        startClientY: 0,
+        startPanX: 0,
+        startPanY: 0,
+        moved: false,
+        suppressClick: false
+      }
+    };
+
+    const $ = id => document.getElementById(id);
+    const elements = {
+      mapFrame: $("mapFrame"), mapCanvas: $("mapCanvas"), gatewayMap: $("gatewayMap"), zoneLayer: $("zoneLayer"),
+      mapControls: $("mapControls"), zoomOut: $("zoomOut"), zoomIn: $("zoomIn"),
+      zoomReset: $("zoomReset"), zoomLevel: $("zoomLevel"),
+      zoneForm: $("zoneForm"), zoneName: $("zoneName"), species: $("species"),
+      targetCount: $("targetCount"), radius: $("radius"), growth: $("growth"),
+      roamRadius: $("roamRadius"), activationRadius: $("activationRadius"),
+      growthDistribution: $("growthDistribution"), depthFields: $("depthFields"),
+      minimumDepth: $("minimumDepth"), maximumDepth: $("maximumDepth"),
+      herdLifetime: $("herdLifetime"), respawnMin: $("respawnMin"), respawnMax: $("respawnMax"),
+      behavior: $("behavior"), coordinates: $("coordinates"),
+      zoneEnabled: $("zoneEnabled"), runtimeBadge: $("runtimeBadge"),
+      startRuntime: $("startRuntime"), stopRuntime: $("stopRuntime"),
+      zoneList: $("zoneList"), editorMode: $("editorMode"), applyZone: $("applyZone"),
+      deleteZone: $("deleteZone"), zoneStat: $("zoneStat"), targetStat: $("targetStat"),
+      statusLine: $("statusLine"), events: $("events"), adminName: $("adminName"),
+      traceProbe: $("traceProbe"), spawnProbe: $("spawnProbe"),
+      calibrationStat: $("calibrationStat"), calibrationStatus: $("calibrationStatus"),
+      calibrationList: $("calibrationList"), capturePosition: $("capturePosition"),
+      applyCalibration: $("applyCalibration"), clearCalibration: $("clearCalibration")
+    };
+
+    async function request(path, options = {}) {
+      const response = await fetch(API + path, {
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options
+      });
+      if (!response.ok) {
+        let message = `${response.status} ${response.statusText}`;
+        try {
+          const body = await response.json();
+          const validation = body.errors
+            ? Object.values(body.errors).flat().join(" ")
+            : "";
+          message = body.error || body.detail || validation || body.title || message;
+        } catch {}
+        throw new Error(message);
+      }
+      return response.status === 204 ? null : response.json();
+    }
+
+    function uuid() {
+      return crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === "x" ? r : (r & 3 | 8)).toString(16);
+      });
+    }
+
+    function currentTransform() {
+      return state.calibration?.transform || DEFAULT_TRANSFORM;
+    }
+
+    function clampMapPan() {
+      const rect = elements.mapFrame.getBoundingClientRect();
+      const minimumX = rect.width * (1 - state.mapView.zoom);
+      const minimumY = rect.height * (1 - state.mapView.zoom);
+      state.mapView.panX = Math.max(minimumX, Math.min(0, state.mapView.panX));
+      state.mapView.panY = Math.max(minimumY, Math.min(0, state.mapView.panY));
+    }
+
+    function applyMapView() {
+      clampMapPan();
+      elements.mapCanvas.style.transform = `translate(${state.mapView.panX}px, ${state.mapView.panY}px) scale(${state.mapView.zoom})`;
+      elements.mapFrame.classList.toggle("zoomed", state.mapView.zoom > 1.001);
+      elements.mapFrame.classList.toggle("dragging", state.mapView.dragging);
+      elements.zoomLevel.value = `${Math.round(state.mapView.zoom * 100)}%`;
+      elements.zoomOut.disabled = state.mapView.zoom <= 1.001;
+      elements.zoomIn.disabled = state.mapView.zoom >= 5.999;
+      renderMap();
+    }
+
+    function setMapZoom(nextZoom, anchorClientX, anchorClientY) {
+      const oldZoom = state.mapView.zoom;
+      const zoom = Math.max(1, Math.min(6, nextZoom));
+      if (Math.abs(zoom - oldZoom) < .001) return;
+      const rect = elements.mapFrame.getBoundingClientRect();
+      const localX = (anchorClientX ?? rect.left + rect.width / 2) - rect.left;
+      const localY = (anchorClientY ?? rect.top + rect.height / 2) - rect.top;
+      const mapX = (localX - state.mapView.panX) / oldZoom;
+      const mapY = (localY - state.mapView.panY) / oldZoom;
+      state.mapView.zoom = zoom;
+      state.mapView.panX = localX - mapX * zoom;
+      state.mapView.panY = localY - mapY * zoom;
+      applyMapView();
+    }
+
+    function resetMapView() {
+      state.mapView.zoom = 1;
+      state.mapView.panX = 0;
+      state.mapView.panY = 0;
+      applyMapView();
+    }
+
+    function clientToPixel(clientX, clientY) {
+      const rect = elements.mapFrame.getBoundingClientRect();
+      const displayX = Math.max(0, Math.min(
+        rect.width,
+        (clientX - rect.left - state.mapView.panX) / state.mapView.zoom
+      ));
+      const displayY = Math.max(0, Math.min(
+        rect.height,
+        (clientY - rect.top - state.mapView.panY) / state.mapView.zoom
+      ));
+      return {
+        x: displayX / rect.width * (MAP.size - 1),
+        y: displayY / rect.height * (MAP.size - 1)
+      };
+    }
+
+    function pixelToWorld(pixelX, pixelY) {
+      const t = currentTransform();
+      const determinant = t.pixelXFromWorldX * t.pixelYFromWorldY
+        - t.pixelXFromWorldY * t.pixelYFromWorldX;
+      if (!Number.isFinite(determinant) || Math.abs(determinant) < 1e-10) {
+        throw new Error("The saved map transform is not invertible.");
+      }
+      const targetX = pixelX - t.pixelXOffset;
+      const targetY = pixelY - t.pixelYOffset;
+      return {
+        x: (targetX * t.pixelYFromWorldY - t.pixelXFromWorldY * targetY) / determinant,
+        y: (t.pixelXFromWorldX * targetY - targetX * t.pixelYFromWorldX) / determinant
+      };
+    }
+
+    function mapToWorld(clientX, clientY) {
+      const pixel = clientToPixel(clientX, clientY);
+      return pixelToWorld(pixel.x, pixel.y);
+    }
+
+    function worldToMap(x, y) {
+      const t = currentTransform();
+      const pixelX = t.pixelXFromWorldX * x + t.pixelXFromWorldY * y + t.pixelXOffset;
+      const pixelY = t.pixelYFromWorldX * x + t.pixelYFromWorldY * y + t.pixelYOffset;
+      return {
+        left: pixelX / (MAP.size - 1) * 100,
+        top: pixelY / (MAP.size - 1) * 100
+      };
+    }
+
+    function mapPercentToViewport(leftPercent, topPercent, rect) {
+      return {
+        left: state.mapView.panX
+          + leftPercent / 100 * rect.width * state.mapView.zoom,
+        top: state.mapView.panY
+          + topPercent / 100 * rect.height * state.mapView.zoom
+      };
+    }
+
+    function selectedZone() {
+      return state.config.zones.find(zone => zone.id === state.selectedId) || null;
+    }
+
+    function selectedPoint() {
+      const zone = selectedZone();
+      return state.draftPoint || (zone ? { x: zone.x, y: zone.y } : null);
+    }
+
+    function setStatus(message, kind = "") {
+      elements.statusLine.textContent = message;
+      elements.statusLine.className = `status-line ${kind}`;
+    }
+
+    function refreshStats() {
+      const count = state.config.zones.length;
+      const total = state.config.zones.reduce((sum, zone) => sum + Number(zone.targetCount || 0), 0);
+      elements.zoneStat.textContent = count;
+      elements.targetStat.textContent = total;
+    }
+
+    function renderRuntime() {
+      const enabled = state.config?.enabled === true;
+      elements.runtimeBadge.textContent = enabled ? "MAIASAURA AUTOMATION ACTIVE" : "AUTOMATION STOPPED";
+      elements.startRuntime.disabled = enabled;
+      elements.stopRuntime.disabled = !enabled;
+    }
+
+    function renderMap() {
+      elements.zoneLayer.replaceChildren();
+      const viewportRect = elements.mapFrame.getBoundingClientRect();
+      const transform = currentTransform();
+      const pixelsPerWorldUnit = (
+        Math.hypot(transform.pixelXFromWorldX, transform.pixelYFromWorldX)
+        + Math.hypot(transform.pixelXFromWorldY, transform.pixelYFromWorldY)
+      ) / 2;
+      for (const zone of state.config.zones) {
+        const point = worldToMap(zone.x, zone.y);
+        const viewport = mapPercentToViewport(point.left, point.top, viewportRect);
+        const selected = zone.id === state.selectedId;
+        const radii = [
+          [zone.activationRadiusMeters || 700, "rgba(105,216,174,.55)", "rgba(105,216,174,.035)"],
+          [zone.roamRadiusMeters || 300, "rgba(240,191,36,.68)", "rgba(240,191,36,.05)"],
+          [zone.spawnRadiusMeters, "rgba(47,216,223,.82)", "rgba(47,216,223,.10)"]
+        ];
+        for (const [meters, border, background] of radii) {
+          const radius = document.createElement("div");
+          radius.className = `zone-radius${selected ? " selected" : ""}`;
+          const diameterPercent = meters * 100 * 2 * pixelsPerWorldUnit / (MAP.size - 1) * 100;
+          Object.assign(radius.style, {
+            left: `${viewport.left}px`, top: `${viewport.top}px`,
+            width: `${diameterPercent / 100 * viewportRect.width * state.mapView.zoom}px`,
+            aspectRatio: "1", borderColor: border, background
+          });
+          elements.zoneLayer.append(radius);
+        }
+        const marker = document.createElement("div");
+        marker.className = `zone-marker${selected ? " selected" : ""}`;
+        Object.assign(marker.style, {
+          left: `${viewport.left}px`,
+          top: `${viewport.top}px`
+        });
+        elements.zoneLayer.append(marker);
+      }
+      if (state.draftPoint) {
+        const point = worldToMap(state.draftPoint.x, state.draftPoint.y);
+        const viewport = mapPercentToViewport(point.left, point.top, viewportRect);
+        const marker = document.createElement("div");
+        marker.className = "zone-marker selected";
+        Object.assign(marker.style, {
+          left: `${viewport.left}px`,
+          top: `${viewport.top}px`
+        });
+        elements.zoneLayer.append(marker);
+      }
+    }
+
+    function renderList() {
+      elements.zoneList.replaceChildren();
+      if (!state.config.zones.length) {
+        const empty = document.createElement("div");
+        empty.className = "coord";
+        empty.textContent = "No AI spawn zones configured.";
+        elements.zoneList.append(empty);
+        return;
+      }
+      for (const zone of state.config.zones) {
+        const row = document.createElement("div");
+        row.className = `zone-row${zone.id === state.selectedId ? " selected" : ""}`;
+        const button = document.createElement("button");
+        button.type = "button";
+        const strong = document.createElement("strong");
+        strong.textContent = zone.name;
+        const small = document.createElement("small");
+        small.textContent = `${zone.enabled ? "Enabled" : "Disabled"} · ${zone.species} · ${zone.spawnRadiusMeters}/${zone.roamRadiusMeters || 300}/${zone.activationRadiusMeters || 700}m · ${zone.behavior}`;
+        button.append(strong, small);
+        button.addEventListener("click", () => selectZone(zone.id));
+        const count = document.createElement("span");
+        count.className = "zone-count";
+        count.textContent = `${zone.targetCount} AI`;
+        row.append(button, count);
+        elements.zoneList.append(row);
+      }
+    }
+
+    function setCalibrationStatus(message, kind = "") {
+      elements.calibrationStatus.textContent = message;
+      elements.calibrationStatus.className = `status-line ${kind}`;
+    }
+
+    function renderCalibration() {
+      const saved = state.calibration;
+      elements.calibrationStat.textContent = saved?.calibrated
+        ? saved.samples.length
+        : "0";
+      elements.applyCalibration.disabled = state.calibrationSamples.length < 3
+        || Boolean(state.captureCommandId)
+        || Boolean(state.pendingCapture);
+      elements.capturePosition.disabled = Boolean(state.captureCommandId)
+        || Boolean(state.pendingCapture);
+      elements.calibrationList.replaceChildren();
+
+      if (!state.calibrationSamples.length) {
+        const empty = document.createElement("div");
+        empty.className = "coord";
+        empty.textContent = "No calibration samples captured yet.";
+        elements.calibrationList.append(empty);
+        return;
+      }
+
+      state.calibrationSamples.forEach((sample, index) => {
+        const row = document.createElement("div");
+        row.className = "calibration-row";
+        const details = document.createElement("div");
+        const strong = document.createElement("strong");
+        strong.textContent = sample.label || `Point ${index + 1}`;
+        const small = document.createElement("small");
+        const residual = Number(sample.residualPixels || 0);
+        const worldX = Number(sample.worldX);
+        const worldY = Number(sample.worldY);
+        small.textContent = Number.isFinite(worldX) && Number.isFinite(worldY)
+          ? `World ${worldX.toFixed(1)}, ${worldY.toFixed(1)}`
+            + ` · Pixel ${Number(sample.pixelX).toFixed(1)}, ${Number(sample.pixelY).toFixed(1)}`
+            + (saved?.calibrated ? ` · Error ${residual.toFixed(1)}px` : "")
+          : `World coordinates missing · Pixel ${Number(sample.pixelX).toFixed(1)}, ${Number(sample.pixelY).toFixed(1)}`;
+        details.append(strong, small);
+        const remove = document.createElement("button");
+        remove.className = "btn danger";
+        remove.type = "button";
+        remove.textContent = "Remove";
+        remove.addEventListener("click", () => {
+          state.calibrationSamples.splice(index, 1);
+          renderCalibration();
+          renderMap();
+          setCalibrationStatus("Sample removed locally. Apply calibration when ready.");
+        });
+        row.append(details, remove);
+        elements.calibrationList.append(row);
+      });
+    }
+
+    function fillForm(zone) {
+      if (zone) {
+        elements.zoneName.value = zone.name;
+        elements.species.value = zone.species;
+        elements.targetCount.value = zone.targetCount;
+        elements.radius.value = zone.spawnRadiusMeters;
+        elements.roamRadius.value = zone.roamRadiusMeters || 300;
+        elements.activationRadius.value = zone.activationRadiusMeters || 700;
+        elements.growth.value = Math.round(zone.growth * 100);
+        elements.growthDistribution.value = (zone.growthDistribution || [zone.growth]).map(value => Math.round(value * 100)).join(", ");
+        elements.herdLifetime.value = (zone.herdLifetimeSeconds || 600) / 60;
+        elements.respawnMin.value = (zone.respawnDelaySeconds || 300) / 60;
+        elements.respawnMax.value = (zone.respawnDelayMaxSeconds || 600) / 60;
+        elements.behavior.value = zone.behavior;
+        elements.minimumDepth.value = zone.minimumDepthMeters ?? 1;
+        elements.maximumDepth.value = zone.maximumDepthMeters ?? 20;
+        elements.zoneEnabled.checked = zone.enabled !== false;
+        elements.depthFields.hidden = !zone.aquatic;
+        elements.applyZone.textContent = "Update zone";
+        elements.deleteZone.disabled = false;
+        elements.editorMode.textContent = `Editing ${zone.name}`;
+      } else {
+        elements.applyZone.textContent = "Add zone";
+        elements.deleteZone.disabled = true;
+        elements.editorMode.textContent = state.draftPoint ? "New point selected." : "Click the map to create a zone.";
+      }
+      refreshCoordinates();
+    }
+
+    function refreshCoordinates() {
+      const point = selectedPoint();
+      elements.coordinates.textContent = point
+        ? `World X ${point.x.toFixed(1)} / Y ${point.y.toFixed(1)} / Z resolved by trace`
+        : "No map point selected";
+      elements.traceProbe.disabled = !point;
+      elements.spawnProbe.disabled = !point || state.tracePassedFor !== pointKey(point);
+    }
+
+    function pointKey(point) { return `${point.x.toFixed(1)}:${point.y.toFixed(1)}`; }
+
+    function selectZone(id) {
+      state.selectedId = id;
+      state.draftPoint = null;
+      state.tracePassedFor = null;
+      fillForm(selectedZone());
+      renderMap();
+      renderList();
+    }
+
+    function newZone() {
+      state.selectedId = null;
+      state.draftPoint = null;
+      state.tracePassedFor = null;
+      elements.zoneForm.reset();
+      elements.zoneName.value = "Maiasaura Herd";
+      elements.targetCount.value = 3;
+      elements.radius.value = 50;
+      elements.roamRadius.value = 300;
+      elements.activationRadius.value = 700;
+      elements.growth.value = 100;
+      elements.growthDistribution.value = "100, 75, 50";
+      elements.herdLifetime.value = 10;
+      elements.respawnMin.value = 5;
+      elements.respawnMax.value = 10;
+      elements.zoneEnabled.checked = true;
+      fillForm(null);
+      renderMap();
+      renderList();
+    }
+
+    function renderAll() {
+      refreshStats();
+      renderRuntime();
+      renderMap();
+      renderList();
+      renderCalibration();
+      fillForm(selectedZone());
+    }
+
+    function applySpeciesDefaults() {
+      const definition = state.catalog?.find(item => item.name === elements.species.value);
+      if (!definition) return;
+      const growth = definition.defaultGrowthDistribution || [1];
+      elements.targetCount.value = growth.length;
+      elements.radius.value = definition.defaultSpawnRadiusMeters;
+      elements.roamRadius.value = definition.defaultRoamRadiusMeters;
+      elements.activationRadius.value = definition.defaultActivationRadiusMeters;
+      elements.growth.value = Math.round(growth[0] * 100);
+      elements.growthDistribution.value = growth.map(value => Math.round(value * 100)).join(", ");
+      elements.behavior.value = definition.defaultBehavior;
+      elements.depthFields.hidden = !definition.aquatic;
+      elements.spawnProbe.title = definition.manualTestEnabled ? "" : "Aquatic test spawning is not unlocked yet.";
+    }
+
+    elements.species.addEventListener("change", applySpeciesDefaults);
+
+    elements.mapFrame.addEventListener("click", event => {
+      if (state.mapView.suppressClick) {
+        state.mapView.suppressClick = false;
+        return;
+      }
+      if (event.target.closest("#mapControls, .map-hint")) return;
+      if (state.pendingCapture) {
+        if (![state.pendingCapture.worldX, state.pendingCapture.worldY, state.pendingCapture.worldZ].every(Number.isFinite)) {
+          state.pendingCapture = null;
+          renderCalibration();
+          return setCalibrationStatus(
+            "The captured position did not contain valid world coordinates. Capture it again after the game server restarts.",
+            "bad"
+          );
+        }
+        const pixel = clientToPixel(event.clientX, event.clientY);
+        state.calibrationSamples.push({
+          id: uuid(),
+          label: `Point ${state.calibrationSamples.length + 1}`,
+          worldX: state.pendingCapture.worldX,
+          worldY: state.pendingCapture.worldY,
+          pixelX: pixel.x,
+          pixelY: pixel.y,
+          residualPixels: 0
+        });
+        state.pendingCapture = null;
+        renderCalibration();
+        renderMap();
+        setCalibrationStatus(
+          "Point paired. Move to a distant part of Gateway and capture again.",
+          "good"
+        );
+        return;
+      }
+      state.draftPoint = mapToWorld(event.clientX, event.clientY);
+      state.tracePassedFor = null;
+      if (!state.selectedId) elements.editorMode.textContent = "New point selected.";
+      renderMap();
+      refreshCoordinates();
+      setStatus("Point selected. Run the terrain trace before spawning.");
+    });
+
+    elements.zoomIn.addEventListener("click", () => setMapZoom(state.mapView.zoom * 1.5));
+    elements.zoomOut.addEventListener("click", () => setMapZoom(state.mapView.zoom / 1.5));
+    elements.zoomReset.addEventListener("click", resetMapView);
+
+    elements.mapFrame.addEventListener("wheel", event => {
+      if (event.target.closest("#mapControls")) return;
+      event.preventDefault();
+      const factor = event.deltaY < 0 ? 1.22 : 1 / 1.22;
+      setMapZoom(state.mapView.zoom * factor, event.clientX, event.clientY);
+    }, { passive: false });
+
+    elements.mapFrame.addEventListener("pointerdown", event => {
+      if (event.button !== 0 || state.mapView.zoom <= 1.001 || event.target.closest("#mapControls, .map-hint")) return;
+      state.mapView.dragging = true;
+      state.mapView.pointerId = event.pointerId;
+      state.mapView.startClientX = event.clientX;
+      state.mapView.startClientY = event.clientY;
+      state.mapView.startPanX = state.mapView.panX;
+      state.mapView.startPanY = state.mapView.panY;
+      state.mapView.moved = false;
+      elements.mapFrame.setPointerCapture(event.pointerId);
+      applyMapView();
+    });
+
+    elements.mapFrame.addEventListener("pointermove", event => {
+      if (!state.mapView.dragging || event.pointerId !== state.mapView.pointerId) return;
+      const deltaX = event.clientX - state.mapView.startClientX;
+      const deltaY = event.clientY - state.mapView.startClientY;
+      if (Math.hypot(deltaX, deltaY) > 4) state.mapView.moved = true;
+      state.mapView.panX = state.mapView.startPanX + deltaX;
+      state.mapView.panY = state.mapView.startPanY + deltaY;
+      applyMapView();
+    });
+
+    function finishMapDrag(event) {
+      if (!state.mapView.dragging || event.pointerId !== state.mapView.pointerId) return;
+      state.mapView.suppressClick = state.mapView.moved;
+      state.mapView.dragging = false;
+      state.mapView.pointerId = null;
+      if (elements.mapFrame.hasPointerCapture(event.pointerId)) {
+        elements.mapFrame.releasePointerCapture(event.pointerId);
+      }
+      applyMapView();
+    }
+
+    elements.mapFrame.addEventListener("pointerup", finishMapDrag);
+    elements.mapFrame.addEventListener("pointercancel", finishMapDrag);
+
+    elements.zoneForm.addEventListener("submit", event => {
+      event.preventDefault();
+      const point = selectedPoint();
+      if (!point) return setStatus("Select a point on the map first.", "bad");
+      const growthDistribution = elements.growthDistribution.value.split(",")
+        .map(value => Number(value.trim()) / 100).filter(Number.isFinite);
+      const definition = state.catalog.find(item => item.name === elements.species.value);
+      const zone = {
+        id: state.selectedId || uuid(),
+        name: elements.zoneName.value.trim(),
+        species: elements.species.value,
+        x: point.x,
+        y: point.y,
+        targetCount: Number(elements.targetCount.value),
+        spawnRadiusMeters: Number(elements.radius.value),
+        roamRadiusMeters: Number(elements.roamRadius.value),
+        activationRadiusMeters: Number(elements.activationRadius.value),
+        growth: Number(elements.growth.value) / 100,
+        growthDistribution,
+        herdLifetimeSeconds: Math.round(Number(elements.herdLifetime.value) * 60),
+        respawnDelaySeconds: Math.round(Number(elements.respawnMin.value) * 60),
+        respawnDelayMaxSeconds: Math.round(Number(elements.respawnMax.value) * 60),
+        behavior: elements.behavior.value,
+        aquatic: Boolean(definition?.aquatic),
+        minimumDepthMeters: Number(elements.minimumDepth.value),
+        maximumDepthMeters: Number(elements.maximumDepth.value),
+        enabled: elements.zoneEnabled.checked
+      };
+      if (!zone.name) return setStatus("Zone name is required.", "bad");
+      if (growthDistribution.length !== zone.targetCount) return setStatus("Enter one growth percentage for every AI in the group.", "bad");
+      const index = state.config.zones.findIndex(item => item.id === zone.id);
+      if (index >= 0) state.config.zones[index] = zone; else state.config.zones.push(zone);
+      state.selectedId = zone.id;
+      state.draftPoint = null;
+      renderAll();
+      setStatus("Zone updated locally. Press Save zones to persist it.", "good");
+    });
+
+    $("newZone").addEventListener("click", newZone);
+    elements.deleteZone.addEventListener("click", () => {
+      if (!state.selectedId) return;
+      state.config.zones = state.config.zones.filter(zone => zone.id !== state.selectedId);
+      newZone();
+      setStatus("Zone removed locally. Press Save zones to persist it.", "good");
+    });
+
+    $("saveConfig").addEventListener("click", async () => {
+      try {
+        const result = await request("/config", { method: "PUT", body: JSON.stringify(state.config) });
+        state.config = result.config;
+        renderAll();
+        setStatus(result.note, "good");
+      } catch (error) { setStatus(error.message, "bad"); }
+    });
+
+    async function setRuntime(enabled) {
+      if (enabled && !confirm("Start automatic Maiasaura spawning for every enabled Maia zone? Herds spawn only while a live player is inside the activation radius.")) return;
+      if (!enabled && !confirm("Emergency-stop automatic AI and despawn all AI currently owned by this system?")) return;
+      try {
+        state.config.enabled = enabled;
+        const result = await request("/config", { method: "PUT", body: JSON.stringify(state.config) });
+        state.config = result.config;
+        renderAll();
+        setStatus(result.note, "good");
+      } catch (error) { setStatus(error.message, "bad"); }
+    }
+    elements.startRuntime.addEventListener("click", () => setRuntime(true));
+    elements.stopRuntime.addEventListener("click", () => setRuntime(false));
+
+    elements.capturePosition.addEventListener("click", async () => {
+      if (state.pendingCapture) {
+        return setCalibrationStatus("Click your captured position on the map first.", "bad");
+      }
+      try {
+        const result = await request("/calibration/capture", {
+          method: "POST",
+          body: "{}"
+        });
+        state.captureCommandId = result.id;
+        renderCalibration();
+        setCalibrationStatus(
+          `Live position capture queued (${result.id.slice(0, 8)}). Stay still until it completes.`,
+          "good"
+        );
+        setTimeout(loadEvents, 1200);
+      } catch (error) {
+        setCalibrationStatus(error.message, "bad");
+      }
+    });
+
+    elements.applyCalibration.addEventListener("click", async () => {
+      if (state.calibrationSamples.length < 3) {
+        return setCalibrationStatus("Capture at least three widely separated points.", "bad");
+      }
+      if (state.calibrationSamples.some(sample =>
+        !Number.isFinite(Number(sample.worldX))
+        || !Number.isFinite(Number(sample.worldY))
+        || !Number.isFinite(Number(sample.pixelX))
+        || !Number.isFinite(Number(sample.pixelY)))) {
+        return setCalibrationStatus(
+          "Remove the samples with missing coordinates, then capture fresh positions.",
+          "bad"
+        );
+      }
+      try {
+        const result = await request("/calibration", {
+          method: "PUT",
+          body: JSON.stringify({ samples: state.calibrationSamples })
+        });
+        state.calibration = result.calibration;
+        state.calibrationSamples = result.calibration.samples.map(sample => ({ ...sample }));
+        renderAll();
+        setCalibrationStatus(
+          `${result.note} RMS error: ${Number(result.calibration.rmsErrorPixels).toFixed(1)}px.`,
+          "good"
+        );
+      } catch (error) {
+        setCalibrationStatus(error.message, "bad");
+      }
+    });
+
+    elements.clearCalibration.addEventListener("click", () => {
+      state.calibrationSamples = [];
+      state.pendingCapture = null;
+      state.captureCommandId = null;
+      renderCalibration();
+      renderMap();
+      setCalibrationStatus(
+        "Draft samples cleared. The last applied transform remains active until a new calibration is applied."
+      );
+    });
+
+    $("inspectProbe").addEventListener("click", async () => {
+      try {
+        const result = await request("/probe/inspect", { method: "POST", body: "{}" });
+        setStatus(`Inspection queued (${result.id.slice(0, 8)}).`, "good");
+        setTimeout(loadEvents, 1500);
+      } catch (error) { setStatus(error.message, "bad"); }
+    });
+
+    elements.traceProbe.addEventListener("click", async () => {
+      const point = selectedPoint();
+      if (!point) return;
+      try {
+        const result = await request("/probe/trace", { method: "POST", body: JSON.stringify(point) });
+        state.tracePassedFor = null;
+        setStatus(`Terrain trace queued (${result.id.slice(0, 8)}). Waiting for result...`, "good");
+        setTimeout(loadEvents, 1500);
+      } catch (error) { setStatus(error.message, "bad"); }
+    });
+
+    elements.spawnProbe.addEventListener("click", async () => {
+      const point = selectedPoint();
+      if (!point) return;
+      const zone = selectedZone();
+      if (!zone) return setStatus("Save and select the zone before starting its lifecycle test.", "bad");
+      const species = elements.species.value;
+      const definition = state.catalog.find(item => item.name === species);
+      if (!definition?.manualTestEnabled) return setStatus("Aquatic test spawning is locked until water/depth validation is ready.", "bad");
+      const targetCount = Number(elements.targetCount.value);
+      const growthDistribution = elements.growthDistribution.value.split(",")
+        .map(value => Number(value.trim()) / 100).filter(Number.isFinite);
+      if (growthDistribution.length !== targetCount) return setStatus("Enter one growth percentage for every group member.", "bad");
+      const lifeMinutes = Math.round((zone.herdLifetimeSeconds || 600) / 60);
+      const cooldownMin = Math.round((zone.respawnDelaySeconds || 300) / 60);
+      const cooldownMax = Math.round((zone.respawnDelayMaxSeconds || 600) / 60);
+      if (!confirm(`Start a ${targetCount}-${species} herd cycle? Survivors despawn together after ${lifeMinutes} minutes; the full herd can return ${cooldownMin}–${cooldownMax} minutes later while players are nearby.`)) return;
+      try {
+        const result = await request("/probe/spawn", {
+          method: "POST",
+          body: JSON.stringify({
+            species, x: point.x, y: point.y,
+            growth: Number(elements.growth.value) / 100,
+            targetCount,
+            spawnRadiusMeters: Number(elements.radius.value),
+            growthDistribution,
+            zoneId: zone.id,
+            respawnDelaySeconds: zone.respawnDelaySeconds,
+            activationRadiusMeters: zone.activationRadiusMeters,
+            herdLifetimeSeconds: zone.herdLifetimeSeconds,
+            respawnDelayMaxSeconds: zone.respawnDelayMaxSeconds
+          })
+        });
+        elements.spawnProbe.disabled = true;
+        setStatus(`${targetCount}-AI group test queued (${result.id.slice(0, 8)}).`, "good");
+        setTimeout(loadEvents, 1500);
+      } catch (error) { setStatus(error.message, "bad"); }
+    });
+
+    async function loadEvents() {
+      try {
+        const rows = await request("/events?take=50");
+        elements.events.textContent = rows.length
+          ? rows.map(row => {
+              const placement = row.event === "spawn-result" && Number.isFinite(Number(row.actualX))
+                ? `\nRequested XY: ${Number(row.x).toFixed(1)}, ${Number(row.y).toFixed(1)}`
+                  + `\nActual XY: ${Number(row.actualX).toFixed(1)}, ${Number(row.actualY).toFixed(1)}`
+                  + `\nXY delta: ${Number(row.deltaX).toFixed(1)}, ${Number(row.deltaY).toFixed(1)}`
+                  + `\nGround / final Z: ${Number(row.groundZ).toFixed(1)} / ${Number(row.actualZ).toFixed(1)}`
+                  + `\nPlacement verified: ${row.placementVerified === true ? "yes" : "no"}`
+                : "";
+              const capture = row.event === "capture-result" && row.ok === true
+                ? `\nLive XYZ: ${Number(row.worldX).toFixed(1)}, ${Number(row.worldY).toFixed(1)}, ${Number(row.worldZ).toFixed(1)}`
+                : "";
+              return `[${row.timestampUtc || "-"}] ${row.event || row.verb || "event"} ${row.ok === false ? "FAILED" : ""}`
+                + `\n${row.message || row.reason || JSON.stringify(row)}${placement}${capture}`;
+            }).join("\n\n")
+          : "No probe events yet.";
+        elements.events.scrollTop = elements.events.scrollHeight;
+        const point = selectedPoint();
+        if (point) {
+          const latestTrace = [...rows].reverse().find(row => row.event === "trace-result" && Math.abs(Number(row.x) - point.x) < 1 && Math.abs(Number(row.y) - point.y) < 1);
+          if (latestTrace?.ok) {
+            state.tracePassedFor = pointKey(point);
+            setStatus(`Terrain trace passed at Z ${Number(latestTrace.groundZ).toFixed(1)}. One-AI spawn is unlocked.`, "good");
+          }
+        }
+        if (state.captureCommandId) {
+          const captured = [...rows].reverse().find(row =>
+            row.event === "capture-result" && row.id === state.captureCommandId
+          );
+          if (captured && captured.id !== state.processedCaptureId) {
+            state.processedCaptureId = captured.id;
+            state.captureCommandId = null;
+            if (captured.ok === true) {
+              const worldX = Number(captured.worldX);
+              const worldY = Number(captured.worldY);
+              const worldZ = Number(captured.worldZ);
+              if ([worldX, worldY, worldZ].every(Number.isFinite)) {
+                state.pendingCapture = { worldX, worldY, worldZ };
+                setCalibrationStatus(
+                  "Position captured. Now click your exact location on the V8 Gateway map.",
+                  "good"
+                );
+              } else {
+                state.pendingCapture = null;
+                setCalibrationStatus(
+                  "The game-side capture omitted its world coordinates. Restart the game server after installing v0.1.6, then capture again.",
+                  "bad"
+                );
+              }
+            } else {
+              setCalibrationStatus(
+                captured.reason || "Live position capture failed.",
+                "bad"
+              );
+            }
+            renderCalibration();
+          }
+        }
+        refreshCoordinates();
+      } catch (error) {
+        elements.events.textContent = `Could not load probe events: ${error.message}`;
+      }
+    }
+
+    async function boot() {
+      try {
+        const [session, catalog, config, calibration] = await Promise.all([
+          request("/session"), request("/catalog"), request("/config"),
+          request("/calibration")
+        ]);
+        elements.adminName.textContent = `${session.displayName} - AI Administrator`;
+        elements.species.replaceChildren(...catalog.species.map(item => {
+          const option = document.createElement("option");
+          option.value = item.name;
+          option.textContent = `${item.name} · ${item.category}${item.manualTestEnabled ? "" : " · config only"}`;
+          return option;
+        }));
+        elements.behavior.replaceChildren(...["Defensive", "Skittish", "AquaticMixed", "NativeAquatic"].map(value => {
+          const option = document.createElement("option"); option.value = value; option.textContent = value; return option;
+        }));
+        state.catalog = catalog.species;
+        state.config = config;
+        state.calibration = calibration;
+        state.calibrationSamples = (calibration.samples || []).map(sample => ({ ...sample }));
+        renderAll();
+        applyMapView();
+        setCalibrationStatus(
+          calibration.calibrated
+            ? `Active calibration: ${calibration.samples.length} points, RMS ${Number(calibration.rmsErrorPixels).toFixed(1)}px.`
+            : "Default transform active. Capture at least three widely separated points."
+        );
+        await loadEvents();
+        state.eventsTimer = setInterval(loadEvents, 5000);
+      } catch (error) {
+        document.body.innerHTML = `<main class="shell"><article class="card"><div class="form"><h1>Access unavailable</h1><p style="color:var(--muted)">${String(error.message).replace(/[<>&]/g, "")}</p></div></article></main>`;
+      }
+    }
+
+    window.addEventListener("resize", resetMapView);
+    boot();
+  </script>
+</body>
+</html>

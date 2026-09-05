@@ -5,9 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#17110c">
   <title>The Mesozoic Skin Creator</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20">
-  <link rel="stylesheet" href="/styles.css?v=28">
-  <script src="/app.js?v=28" defer></script>
+  <link rel="stylesheet" href="/styles.css?v=8">
+  <script src="/app.js?v=8" defer></script>
 </head>
 <body>
   <div class="page-shell">
@@ -65,7 +64,8 @@
       <section id="offlineGate" class="gate-card card is-hidden">
         <span class="section-kicker">NO ACTIVE DINOSAUR</span>
         <h2>Join the server and spawn first</h2>
-        <p>This page will automatically update once you're spawned as a dinosaur on the server.</p>
+        <p>miniEniac could not find an active dinosaur for your linked Steam account.</p>
+        <button id="retrySkinButton" class="button button--primary" type="button">Try again</button>
       </section>
 
       <section id="workspace" class="workspace is-hidden" aria-live="polite">
@@ -74,25 +74,25 @@
             <span class="section-kicker">CURRENT DINOSAUR</span>
             <h2 id="speciesName">Unknown</h2>
           </div>
+          <button id="refreshButton" class="button button--ghost" type="button">Refresh from game</button>
         </div>
 
         <div class="editor-layout">
           <aside class="preview-card card">
             <div class="preview-heading">
-              <span class="section-kicker">SKIN SUMMARY</span>
-              <p>Summary of the colors currently selected below.</p>
+              <span class="section-kicker">COLOR PREVIEW</span>
+              <p>Palette preview for the colors currently selected below.</p>
             </div>
 
-            <div class="palette-preview" id="palettePreview" aria-label="Current skin summary">
-              <div data-preview="maleDisplay" aria-label="Male display"></div>
-              <div data-preview="markings" aria-label="Markings"></div>
-              <div data-preview="flank" aria-label="Flank"></div>
-              <div data-preview="body" aria-label="Body"></div>
-              <div data-preview="underbelly" aria-label="Underbelly"></div>
-              <div data-preview="detail1" aria-label="Details"></div>
-              <div data-preview="claws" aria-label="Claws"></div>
-              <div data-preview="teeth" aria-label="Teeth"></div>
-              <div data-preview="mouth" aria-label="Mouth"></div>
+            <div class="palette-preview" id="palettePreview" aria-label="Current skin color palette preview">
+              <div data-preview="body"></div>
+              <div data-preview="markings"></div>
+              <div data-preview="flank"></div>
+              <div data-preview="underbelly"></div>
+              <div data-preview="maleDisplay"></div>
+              <div data-preview="teeth"></div>
+              <div data-preview="mouth"></div>
+              <div data-preview="claws"></div>
             </div>
 
             <div class="appearance-controls">
@@ -123,101 +123,25 @@
             <div class="editor-heading">
               <div>
                 <span class="section-kicker">SKIN COLORS</span>
-                <h2 id="colorEditorTitle">Customize your colors</h2>
+                <h2 id="colorEditorTitle">Customize visible channels</h2>
               </div>
-              <div class="reset-control">
-                <span
-                  id="resetWarning"
-                  class="reset-warning"
-                  role="note">
-                  Currently doesn't work --->
-                </span>
-
-                <button id="resetButton" class="button button--ghost reset-button" type="button">
-                <svg class="reset-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7"></path>
-                </svg>
-                <span>Reset to default colors</span>
-              </button>
-              </div>
+              <button id="resetButton" class="button button--ghost" type="button">Reset loaded values</button>
             </div>
+            <p class="editor-note">Detail and Eyes stay supported internally but are hidden because those regions no longer affect live EVRIMA skins.</p>
 
             <div id="colorGrid" class="color-grid"></div>
 
             <div class="apply-bar">
-              <div
-                id="requestStatus"
-                class="request-status"
-                role="status"></div>
-
-              <div class="skin-action-buttons">
-                <button
-                  id="importSkinButton"
-                  class="button button--ghost"
-                  type="button">
-                  Import skin
-                </button>
-
-                <button
-                  id="exportCurrentSkinButton"
-                  class="button button--ghost"
-                  type="button">
-                  Export skin
-                </button>
-
-                <button
-                  id="applyButton"
-                  class="button button--apply"
-                  type="button">
-                  Randomize
-                </button>
+              <div id="requestStatus" class="request-status" role="status">
+                <strong>Ready</strong>
+                <span>Change your skin, then apply it to your live dinosaur.</span>
               </div>
+              <button id="applyButton" class="button button--apply" type="button">Apply to live dinosaur</button>
             </div>
           </section>
         </div>
-
-        <section id="skinPresetPanel" class="preset-panel card" aria-labelledby="presetPanelTitle">
-          <div class="preset-header">
-            <div>
-              <span class="section-kicker">SKIN LIBRARY</span>
-              <h2 id="presetPanelTitle">Save your skins</h2>
-              <p>Save up to 40 named presets for each dinosaur species.</p>
-            </div>
-          </div>
-
-          <div class="preset-save-row">
-
-            <div class="preset-name-field">
-              <label for="presetName">Preset name</label>
-              <input
-                id="presetName"
-                type="text"
-                maxlength="40"
-                autocomplete="off"
-                placeholder="For example: Forest Troodon">
-            </div>
-
-            <button id="savePresetButton" class="button button--primary" type="button">
-              Save preset
-            </button>
-          </div>
-
-          <div class="preset-library-heading">
-            <div>
-              <strong>Saved presets</strong>
-              <span id="presetSpeciesLabel">Current species</span>
-            </div>
-
-            <span id="presetCounter" class="preset-counter">0/40</span>
-          </div>
-
-          <div id="presetList" class="preset-list">
-            <div class="preset-empty">No presets saved for this species yet.</div>
-          </div>
-        </section>
       </section>
     </main>
-
 
     <footer>
       <span>The Mesozoic</span>

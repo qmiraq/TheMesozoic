@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="mesozoicGradient" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#eac43e"/>
+      <stop offset="0.34" stop-color="#d7893a"/>
+      <stop offset="0.68" stop-color="#2cc0c6"/>
+      <stop offset="1" stop-color="#6fae82"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="18" fill="url(#mesozoicGradient)"/>
+  <path d="M14 47V17h9l9 15 9-15h9v30h-8V29l-8 13h-4l-8-13v18z" fill="#160d09"/>
+</svg>

@@ -1,8 +1,20 @@
+using Microsoft.AspNetCore.HttpOverrides;
+using System.Net;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using miniEniac_RCON.Endpoints;
 using miniEniac_RCON.Services;
 using miniEniac_RCON.Models;
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto;
+
+    // Only the local Caddy reverse proxy is trusted.
+    options.KnownProxies.Add(IPAddress.Loopback);
+    options.KnownProxies.Add(IPAddress.IPv6Loopback);
+});
 
 // Add services to the container.
 
@@ -34,7 +46,7 @@ builder.Services
         options.Cookie.Name = ".TheMesozoic.Auth";
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
         options.SlidingExpiration = true;
 
@@ -64,6 +76,8 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 // Configure the HTTP request pipeline.
+app.UseForwardedHeaders();
+
 app.UseDefaultFiles();
 
 app.UseStaticFiles();
@@ -79,5 +93,7 @@ app.MapControllers();
 app.MapDiscordAuthEndpoints();
 
 app.MapSkinEndpoints();
+
+app.MapSkinPresetEndpoints();
 
 app.Run();

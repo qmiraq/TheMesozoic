@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands, tasks
 
+from bot.services.admin_command_tree import AdminCommandTree
+
 from bot.database.database import init_database
 from bot.services.database_service import create_default_settings
 from bot.config.settings import DISCORD_TOKEN
@@ -21,7 +23,8 @@ class EvrimaBot(commands.Bot):
 
         super().__init__(
             command_prefix="!",
-            intents=intents
+            intents=intents,
+            tree_cls=AdminCommandTree
         )
 
 
@@ -46,6 +49,24 @@ class EvrimaBot(commands.Bot):
             "bot.cogs.server"
         )
 
+        await self.load_extension(
+            "bot.cogs.dino_storage"
+        )
+        await self.load_extension(
+            "bot.cogs.economy"
+        )
+        await self.load_extension(
+            "bot.cogs.admin_logs"
+        )
+        await self.load_extension(
+            "bot.cogs.auto_restart"
+        )
+        await self.load_extension(
+            "bot.cogs.weather_forecast"
+        )
+        await self.load_extension(
+            "bot.cogs.population_control"
+        )
         synced = await self.tree.sync()
 
         logger.info(

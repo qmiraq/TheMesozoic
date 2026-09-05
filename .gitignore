@@ -5,3 +5,11 @@ logs/
 *.log
 *.db
 .vs/
+
+# .NET build output
+**/bin/
+**/obj/
+
+# Local backups
+backups/
+deployment-backups/
