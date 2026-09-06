@@ -10,6 +10,20 @@ logs/
 **/bin/
 **/obj/
 
+# Local/runtime state
+auto_restart_state.json
+server_status_message.json
+population_control_initial_Game.ini
+
+# Production configuration / secrets
+miniEniac-RCON/appsettings.json
+miniEniac-RCON/appsettings.Production.json
+
 # Local backups
 backups/
 deployment-backups/
+
+# Archives
+*.zip
+*.7z
+*.rar
