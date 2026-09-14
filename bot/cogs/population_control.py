@@ -68,7 +68,6 @@ class PopulationControl(commands.Cog):
         self._lock = asyncio.Lock()
         self._last_counts_signature: tuple[tuple[str, int], ...] | None = None
         self._last_designed_counts_signature: tuple[tuple[str, int], ...] | None = None
-        self._last_locked: frozenset[str] | None = None
         self._rcon_base_url: str | None = None
         self._retry_after = 0.0
         self._population_render_cache: dict[str, bytes] = {}
@@ -166,64 +165,167 @@ class PopulationControl(commands.Cog):
             return True
         await message.edit(content=None, embed=None, attachments=[file])
         return True
+    async def _post_update_playables(self, classes: tuple[str, ...]) -> dict:
+        if not classes:
+            raise RuntimeError(
+                "Population-control refused to apply an empty playable roster."
+            )
 
-    async def _post_update_playables(self) -> dict:
+        roster = ",".join(classes)
         candidates = list(RCON_BASE_URLS)
         if self._rcon_base_url in candidates:
             candidates.remove(self._rcon_base_url)
             candidates.insert(0, self._rcon_base_url)
+
         errors: list[str] = []
         timeout = aiohttp.ClientTimeout(total=8)
+
         async with aiohttp.ClientSession(timeout=timeout) as session:
             for base_url in candidates:
                 try:
-                    async with session.post(f"{base_url}/update-playables") as response:
+                    async with session.post(
+                        f"{base_url}/update-playables",
+                        params={"classes": roster},
+                    ) as response:
                         body = await response.text()
                         if response.status < 200 or response.status >= 300:
-                            errors.append(f"{base_url}: HTTP {response.status} {body[:160]}")
+                            errors.append(
+                                f"{base_url}: HTTP {response.status} {body[:160]}"
+                            )
                             continue
+
                         self._rcon_base_url = base_url
                         if not body:
                             return {"ok": True}
+
                         try:
                             value = json.loads(body)
                         except json.JSONDecodeError:
                             return {"ok": True, "response": body}
+
                         return value if isinstance(value, dict) else {"ok": True}
                 except (aiohttp.ClientError, asyncio.TimeoutError) as error:
                     errors.append(f"{base_url}: {error}")
+
         raise RuntimeError("RCON API unavailable: " + " | ".join(errors))
 
+    async def _get_playables(self) -> dict:
+        candidates = list(RCON_BASE_URLS)
+        if self._rcon_base_url in candidates:
+            candidates.remove(self._rcon_base_url)
+            candidates.insert(0, self._rcon_base_url)
+
+        errors: list[str] = []
+        timeout = aiohttp.ClientTimeout(total=8)
+
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            for base_url in candidates:
+                try:
+                    async with session.get(
+                        f"{base_url}/get-playables"
+                    ) as response:
+                        body = await response.text()
+                        if response.status < 200 or response.status >= 300:
+                            errors.append(
+                                f"{base_url}: HTTP {response.status} {body[:160]}"
+                            )
+                            continue
+
+                        self._rcon_base_url = base_url
+                        if not body:
+                            return {"ok": True, "response": ""}
+
+                        try:
+                            value = json.loads(body)
+                        except json.JSONDecodeError:
+                            return {"ok": True, "response": body}
+
+                        return value if isinstance(value, dict) else {"ok": True}
+                except (aiohttp.ClientError, asyncio.TimeoutError) as error:
+                    errors.append(f"{base_url}: {error}")
+
+        raise RuntimeError("RCON API unavailable: " + " | ".join(errors))
+
+    @staticmethod
+    def _extract_playables(response: dict) -> frozenset[str]:
+        raw = response.get("response", "")
+        if isinstance(raw, (list, tuple, set)):
+            text = ",".join(str(value) for value in raw)
+        elif isinstance(raw, str):
+            text = raw
+        else:
+            text = json.dumps(raw, ensure_ascii=False)
+
+        found = {
+            species
+            for species in SPECIES_LIMITS
+            if species in text
+        }
+        return frozenset(found)
+
     async def _reconcile_locks(self, counts: dict[str, int]) -> None:
-        desired = locked_species(counts)
-        if desired == self._last_locked:
-            return
+        desired_locked = locked_species(counts)
+        desired_allowed = tuple(
+            species
+            for species in SPECIES_LIMITS
+            if species not in desired_locked
+        )
+        desired_allowed_set = frozenset(desired_allowed)
+
         now = time.monotonic()
         if now < self._retry_after:
             return
 
-        change = await asyncio.to_thread(prepare_game_ini_change, desired)
-        if change is not None:
-            try:
-                result = await self._post_update_playables()
-                if result.get("ok") is False:
-                    raise RuntimeError(str(result.get("error") or "UpdatePlayables failed"))
-            except Exception:
-                await asyncio.to_thread(rollback_game_ini, change)
-                try:
-                    await self._post_update_playables()
-                except Exception:
-                    LOGGER.exception("Population-control RCON rollback refresh failed")
-                self._retry_after = time.monotonic() + 10
-                raise
+        game_ini_change = None
 
-        self._last_locked = desired
+        try:
+            # Persist the desired state first so a server restart cannot
+            # restore a stale/all-species playable roster.
+            game_ini_change = await asyncio.to_thread(
+                prepare_game_ini_change,
+                desired_locked,
+            )
+
+            # Check the actual live EVRIMA roster after persistence.
+            actual_response = await self._get_playables()
+            actual_allowed = self._extract_playables(actual_response)
+
+            # Only send an RCON update when the live roster differs.
+            if actual_allowed != desired_allowed_set:
+                await self._post_update_playables(desired_allowed)
+
+                # Verify that EVRIMA accepted the exact intended roster.
+                verify_response = await self._get_playables()
+                verified_allowed = self._extract_playables(verify_response)
+
+                if verified_allowed != desired_allowed_set:
+                    raise RuntimeError(
+                        "EVRIMA playable roster mismatch after update: "
+                        f"expected={sorted(desired_allowed_set)} "
+                        f"actual={sorted(verified_allowed)}"
+                    )
+
+        except Exception:
+            if game_ini_change is not None:
+                try:
+                    await asyncio.to_thread(
+                        rollback_game_ini,
+                        game_ini_change,
+                    )
+                except Exception:
+                    LOGGER.exception(
+                        "Population-control Game.ini rollback failed"
+                    )
+
+            self._retry_after = time.monotonic() + 10
+            raise
+
         self._retry_after = 0.0
+
         LOGGER.info(
             "Population-control roster reconciled; locked=%s",
-            ", ".join(sorted(desired)) or "none",
+            ", ".join(sorted(desired_locked)) or "none",
         )
-
     async def _process(self, *, allow_create: bool = False, force: bool = False) -> bool:
         snapshot = await asyncio.to_thread(load_population_snapshot)
         if not snapshot_is_current(snapshot):
@@ -280,7 +382,7 @@ class PopulationControl(commands.Cog):
             interaction.user.guild_permissions.administrator
         ):
             await interaction.response.send_message(
-                "❌ This command is restricted to administrators.", ephemeral=True
+                "âŒ This command is restricted to administrators.", ephemeral=True
             )
             return
         await interaction.response.defer(ephemeral=True, thinking=True)
@@ -290,18 +392,18 @@ class PopulationControl(commands.Cog):
         except Exception:
             LOGGER.exception("Failed to create the population-control panel")
             await interaction.followup.send(
-                "❌ The population-control panel could not be created.", ephemeral=True
+                "âŒ The population-control panel could not be created.", ephemeral=True
             )
             return
         if not updated:
             await interaction.followup.send(
-                "❌ Live population data is not ready. Restart the game server once, "
+                "âŒ Live population data is not ready. Restart the game server once, "
                 "wait a few seconds, and try again.",
                 ephemeral=True,
             )
             return
         await interaction.followup.send(
-            f"✅ Population control is active in <#{POPULATION_CHANNEL_ID}>.",
+            f"âœ… Population control is active in <#{POPULATION_CHANNEL_ID}>.",
             ephemeral=True,
         )
 
@@ -316,7 +418,7 @@ class PopulationControl(commands.Cog):
             interaction.user.guild_permissions.administrator
         ):
             await interaction.response.send_message(
-                "❌ This command is restricted to administrators.", ephemeral=True
+                "âŒ This command is restricted to administrators.", ephemeral=True
             )
             return
         await interaction.response.defer(ephemeral=True, thinking=True)
@@ -326,18 +428,18 @@ class PopulationControl(commands.Cog):
         except Exception:
             LOGGER.exception("Failed to create the designed population panel")
             await interaction.followup.send(
-                "❌ The designed population panel could not be created. Check the bot log for details.",
+                "âŒ The designed population panel could not be created. Check the bot log for details.",
                 ephemeral=True,
             )
             return
         if not updated:
             await interaction.followup.send(
-                "❌ Live population data is not ready. Restart the game server once, wait a few seconds, and try again.",
+                "âŒ Live population data is not ready. Restart the game server once, wait a few seconds, and try again.",
                 ephemeral=True,
             )
             return
         await interaction.followup.send(
-            f"✅ Designed population control is active in <#{POPULATION_CHANNEL_ID}>.",
+            f"âœ… Designed population control is active in <#{POPULATION_CHANNEL_ID}>.",
             ephemeral=True,
         )
 
