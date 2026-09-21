@@ -70,6 +70,10 @@ class PopulationControl(commands.Cog):
         self._last_designed_counts_signature: tuple[tuple[str, int], ...] | None = None
         self._rcon_base_url: str | None = None
         self._retry_after = 0.0
+        # This is process-local live-application state, not lock state. It lets
+        # the bot reapply the authoritative Game.ini roster after a game restart.
+        self._last_live_allowed: frozenset[str] | None = None
+        self._last_live_apply_at = 0.0
         self._population_render_cache: dict[str, bytes] = {}
         self.watch_population.start()
 
@@ -209,60 +213,6 @@ class PopulationControl(commands.Cog):
 
         raise RuntimeError("RCON API unavailable: " + " | ".join(errors))
 
-    async def _get_playables(self) -> dict:
-        candidates = list(RCON_BASE_URLS)
-        if self._rcon_base_url in candidates:
-            candidates.remove(self._rcon_base_url)
-            candidates.insert(0, self._rcon_base_url)
-
-        errors: list[str] = []
-        timeout = aiohttp.ClientTimeout(total=8)
-
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            for base_url in candidates:
-                try:
-                    async with session.get(
-                        f"{base_url}/get-playables"
-                    ) as response:
-                        body = await response.text()
-                        if response.status < 200 or response.status >= 300:
-                            errors.append(
-                                f"{base_url}: HTTP {response.status} {body[:160]}"
-                            )
-                            continue
-
-                        self._rcon_base_url = base_url
-                        if not body:
-                            return {"ok": True, "response": ""}
-
-                        try:
-                            value = json.loads(body)
-                        except json.JSONDecodeError:
-                            return {"ok": True, "response": body}
-
-                        return value if isinstance(value, dict) else {"ok": True}
-                except (aiohttp.ClientError, asyncio.TimeoutError) as error:
-                    errors.append(f"{base_url}: {error}")
-
-        raise RuntimeError("RCON API unavailable: " + " | ".join(errors))
-
-    @staticmethod
-    def _extract_playables(response: dict) -> frozenset[str]:
-        raw = response.get("response", "")
-        if isinstance(raw, (list, tuple, set)):
-            text = ",".join(str(value) for value in raw)
-        elif isinstance(raw, str):
-            text = raw
-        else:
-            text = json.dumps(raw, ensure_ascii=False)
-
-        found = {
-            species
-            for species in SPECIES_LIMITS
-            if species in text
-        }
-        return frozenset(found)
-
     async def _reconcile_locks(self, counts: dict[str, int]) -> None:
         desired_locked = locked_species(counts)
         desired_allowed = tuple(
@@ -277,33 +227,39 @@ class PopulationControl(commands.Cog):
             return
 
         game_ini_change = None
+        applied_live_roster = False
 
         try:
-            # Persist the desired state first so a server restart cannot
-            # restore a stale/all-species playable roster.
+            # Game.ini is the authoritative persistent roster. It is written
+            # first so a server restart cannot restore a stale roster.
             game_ini_change = await asyncio.to_thread(
                 prepare_game_ini_change,
                 desired_locked,
             )
 
-            # Check the actual live EVRIMA roster after persistence.
-            actual_response = await self._get_playables()
-            actual_allowed = self._extract_playables(actual_response)
-
-            # Only send an RCON update when the live roster differs.
-            if actual_allowed != desired_allowed_set:
-                await self._post_update_playables(desired_allowed)
-
-                # Verify that EVRIMA accepted the exact intended roster.
-                verify_response = await self._get_playables()
-                verified_allowed = self._extract_playables(verify_response)
-
-                if verified_allowed != desired_allowed_set:
+            # EVRIMA has no getplayables RCON command, so live state cannot be
+            # queried or verified. Apply at startup, after roster changes, and
+            # periodically to recover from a game-server restart.
+            apply_due = (
+                self._last_live_allowed != desired_allowed_set
+                or now - self._last_live_apply_at >= 60.0
+            )
+            if apply_due:
+                result = await self._post_update_playables(desired_allowed)
+                if result.get("ok") is False:
                     raise RuntimeError(
-                        "EVRIMA playable roster mismatch after update: "
-                        f"expected={sorted(desired_allowed_set)} "
-                        f"actual={sorted(verified_allowed)}"
+                        str(result.get("error") or "UpdatePlayables failed")
                     )
+
+                response = str(result.get("response") or "")
+                if "unknown command" in response.casefold():
+                    raise RuntimeError(
+                        "EVRIMA rejected updateplayables: " + response[:160]
+                    )
+
+                self._last_live_allowed = desired_allowed_set
+                self._last_live_apply_at = now
+                applied_live_roster = True
 
         except Exception:
             if game_ini_change is not None:
@@ -322,10 +278,11 @@ class PopulationControl(commands.Cog):
 
         self._retry_after = 0.0
 
-        LOGGER.info(
-            "Population-control roster reconciled; locked=%s",
-            ", ".join(sorted(desired_locked)) or "none",
-        )
+        if applied_live_roster:
+            LOGGER.info(
+                "Population-control roster applied; locked=%s",
+                ", ".join(sorted(desired_locked)) or "none",
+            )
     async def _process(self, *, allow_create: bool = False, force: bool = False) -> bool:
         snapshot = await asyncio.to_thread(load_population_snapshot)
         if not snapshot_is_current(snapshot):
@@ -382,7 +339,7 @@ class PopulationControl(commands.Cog):
             interaction.user.guild_permissions.administrator
         ):
             await interaction.response.send_message(
-                "âŒ This command is restricted to administrators.", ephemeral=True
+                "Ã¢ÂÅ’ This command is restricted to administrators.", ephemeral=True
             )
             return
         await interaction.response.defer(ephemeral=True, thinking=True)
@@ -392,18 +349,18 @@ class PopulationControl(commands.Cog):
         except Exception:
             LOGGER.exception("Failed to create the population-control panel")
             await interaction.followup.send(
-                "âŒ The population-control panel could not be created.", ephemeral=True
+                "Ã¢ÂÅ’ The population-control panel could not be created.", ephemeral=True
             )
             return
         if not updated:
             await interaction.followup.send(
-                "âŒ Live population data is not ready. Restart the game server once, "
+                "Ã¢ÂÅ’ Live population data is not ready. Restart the game server once, "
                 "wait a few seconds, and try again.",
                 ephemeral=True,
             )
             return
         await interaction.followup.send(
-            f"âœ… Population control is active in <#{POPULATION_CHANNEL_ID}>.",
+            f"Ã¢Å“â€¦ Population control is active in <#{POPULATION_CHANNEL_ID}>.",
             ephemeral=True,
         )
 
@@ -418,7 +375,7 @@ class PopulationControl(commands.Cog):
             interaction.user.guild_permissions.administrator
         ):
             await interaction.response.send_message(
-                "âŒ This command is restricted to administrators.", ephemeral=True
+                "Ã¢ÂÅ’ This command is restricted to administrators.", ephemeral=True
             )
             return
         await interaction.response.defer(ephemeral=True, thinking=True)
@@ -428,18 +385,18 @@ class PopulationControl(commands.Cog):
         except Exception:
             LOGGER.exception("Failed to create the designed population panel")
             await interaction.followup.send(
-                "âŒ The designed population panel could not be created. Check the bot log for details.",
+                "Ã¢ÂÅ’ The designed population panel could not be created. Check the bot log for details.",
                 ephemeral=True,
             )
             return
         if not updated:
             await interaction.followup.send(
-                "âŒ Live population data is not ready. Restart the game server once, wait a few seconds, and try again.",
+                "Ã¢ÂÅ’ Live population data is not ready. Restart the game server once, wait a few seconds, and try again.",
                 ephemeral=True,
             )
             return
         await interaction.followup.send(
-            f"âœ… Designed population control is active in <#{POPULATION_CHANNEL_ID}>.",
+            f"Ã¢Å“â€¦ Designed population control is active in <#{POPULATION_CHANNEL_ID}>.",
             ephemeral=True,
         )
 

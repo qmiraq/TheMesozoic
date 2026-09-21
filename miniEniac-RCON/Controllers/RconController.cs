@@ -114,29 +114,5 @@ public class RconController : ControllerBase
         });
     }
 
-    [HttpGet("get-playables")]
-    public async Task<IActionResult> GetPlayables()
-    {
-        if (!IsLocalRequest())
-            return Forbid();
 
-        using EvrimaRconClient client = CreateClient();
-
-        if (!await client.ConnectAsync())
-        {
-            return StatusCode(502, new
-            {
-                ok = false,
-                error = "Could not connect to EVRIMA RCON."
-            });
-        }
-
-        string response = await client.SendCommandAsync("getplayables");
-
-        return Ok(new
-        {
-            ok = true,
-            response
-        });
-    }
 }
